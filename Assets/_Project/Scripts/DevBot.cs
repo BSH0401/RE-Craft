@@ -92,6 +92,8 @@ namespace ReCraft
                 if (wb.item == null) { Debug.LogError("[Dev] accept failed"); break; }
                 yield return Wait(0.8f);
                 yield return Shot("start");
+                for (int f = 0; f < 20; f++) { wb.item.root.Rotate(Vector3.up, 6f, Space.World); yield return null; }
+                yield return Shot("rotated");
                 wb.forceXray = true;
                 yield return Wait(0.3f);
                 yield return Shot("xray");

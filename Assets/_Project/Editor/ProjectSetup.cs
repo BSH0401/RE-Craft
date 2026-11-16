@@ -15,7 +15,7 @@ namespace ReCraft.EditorTools
         const string Root = "Assets/_Project";
         const string ScenePath = Root + "/Scenes/Workshop.unity";
         const string BuildPath = "Builds/Windows/RECraft.exe";
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         [MenuItem("RE-Craft/Setup Project")]
         public static void Setup()

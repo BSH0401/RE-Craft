@@ -20,6 +20,8 @@ namespace ReCraft
         public List<Offer> offers;
         readonly System.Random rng = new();
         public string OverlayName { get; private set; }
+        public Transform Root => canvas.transform;
+        public Image ToolImage(int i) => toolBtns[i].GetComponent<Image>();
 
         static readonly Color[] Palette =
         {
@@ -218,6 +220,8 @@ namespace ReCraft
         {
             CloseOverlay();
             OverlayName = name;
+            toastTime = 0f;
+            toastBg.gameObject.SetActive(false);
             var dim = UI.Stretch(overlay, "Dim").gameObject.AddComponent<Image>();
             dim.color = new Color(0, 0, 0, 0.55f);
             var panel = UI.Panel(overlay, name, UI.Center, UI.Center, V(0, -10), size, UI.Bg).transform;
@@ -275,6 +279,8 @@ namespace ReCraft
             UI.Label(p, "조작: 우클릭 드래그 회전 · 휠 줌 · Tab X-Ray · 1 손(분리/조립) · 2 드라이버(꾹 누르기) · 3 녹 제거 · 4 세척 · 5 도색", 19, UI.Dim, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 30), V(1100, 60));
             UI.Btn(p, "업그레이드 상점", V(1, 0), V(1, 0), V(-32, 28), V(220, 56), ShowUpgrades);
             UI.Btn(p, "도감", V(1, 0), V(1, 0), V(-262, 28), V(130, 56), ShowCatalog);
+            if (!Tutorial.Running)
+                UI.Btn(p, "튜토리얼 다시 보기", V(1, 1), V(1, 1), V(-196, -20), V(200, 46), () => { G.data.tutorialStep = 0; G.Save(); ShowBoard(); }, null, 20);
             UI.Btn(p, "게임 종료", V(1, 1), V(1, 1), V(-32, -20), V(150, 46), () => { G.Save(); Application.Quit(); }, new Color(0.3f, 0.12f, 0.1f, 0.9f), 20);
         }
 

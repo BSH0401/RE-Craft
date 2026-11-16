@@ -24,6 +24,7 @@ namespace ReCraft
         public bool autoOrder;
         public bool magTray;
         public bool ended;
+        public int tutorialStep;
         public int jobsDone;
         public List<CatalogEntry> catalog = new();
     }
@@ -185,6 +186,8 @@ namespace ReCraft
                 {
                     var d = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
                     if (d != null && d.toolLv != null && d.toolLv.Length == 5) data = d;
+                    // v0.1 세이브(튜토리얼 필드 없음)로 이미 납품해 본 플레이어는 튜토리얼 생략
+                    if (data.jobsDone > 0 && data.tutorialStep == 0) data.tutorialStep = Tutorial.Done;
                 }
             }
             catch (Exception e) { Debug.LogWarning("[Save] load failed: " + e.Message); }

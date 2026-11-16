@@ -49,6 +49,10 @@ namespace ReCraft
             var hudGo = new GameObject("HUDRoot");
             hudGo.transform.SetParent(root.transform, false);
             hudGo.AddComponent<HUD>();
+            if (Flag("-notutorial")) G.data.tutorialStep = Tutorial.Done;
+            if (Arg("-tutorial") != null) G.data.tutorialStep = (int)ArgF("-tutorial", 0);
+            else if ((Flag("-autoplay") || Flag("-showcase")) && !Flag("-withtutorial")) G.data.tutorialStep = Tutorial.Done;
+            hudGo.AddComponent<Tutorial>();
 
             Time.timeScale = ArgF("-timescale", 1f);
             if (Flag("-autoplay") || Flag("-showcase")) root.AddComponent<DevBot>();
