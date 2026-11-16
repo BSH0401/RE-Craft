@@ -15,7 +15,7 @@ namespace ReCraft.EditorTools
         const string Root = "Assets/_Project";
         const string ScenePath = Root + "/Scenes/Workshop.unity";
         const string BuildPath = "Builds/Windows/RECraft.exe";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
 
         [MenuItem("RE-Craft/Setup Project")]
         public static void Setup()
@@ -42,8 +42,44 @@ namespace ReCraft.EditorTools
             // D3D12는 종료 시 크래시가 있어 D3D11로 고정
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64, new[] { GraphicsDeviceType.Direct3D11 });
+            ConfigureGraphics();
             AssetDatabase.SaveAssets();
             Debug.Log("[Setup] RE-Craft setup complete");
+        }
+
+        /// <summary>책상 위 작은 물건 기준으로 그림자 · AA · SSAO를 맞춘다.</summary>
+        static void ConfigureGraphics()
+        {
+            const string pipePath = "Assets/Settings/PC_RPAsset.asset";
+            var pipe = AssetDatabase.LoadMainAssetAtPath(pipePath);
+            if (pipe != null)
+            {
+                var so = new SerializedObject(pipe);
+                void F(string n, float v) { var p = so.FindProperty(n); if (p != null) p.floatValue = v; else Debug.LogWarning("[Setup] missing " + n); }
+                void I(string n, int v) { var p = so.FindProperty(n); if (p != null) p.intValue = v; else Debug.LogWarning("[Setup] missing " + n); }
+                void B(string n, bool v) { var p = so.FindProperty(n); if (p != null) p.boolValue = v; else Debug.LogWarning("[Setup] missing " + n); }
+                F("m_ShadowDistance", 4f);
+                I("m_ShadowCascadeCount", 2);
+                F("m_Cascade2Split", 0.4f);
+                I("m_MainLightShadowmapResolution", 4096);
+                I("m_AdditionalLightsShadowmapResolution", 2048);
+                B("m_AdditionalLightShadowsSupported", true);
+                B("m_SupportsHDR", true);
+                I("m_MSAA", 4);
+                F("m_ShadowDepthBias", 0.6f);
+                F("m_ShadowNormalBias", 0.4f);
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            foreach (var obj in AssetDatabase.LoadAllAssetsAtPath("Assets/Settings/PC_Renderer.asset"))
+            {
+                if (obj == null || obj.GetType().Name != "ScreenSpaceAmbientOcclusion") continue;
+                var so = new SerializedObject(obj);
+                so.FindProperty("m_Settings.Intensity").floatValue = 1.6f;
+                so.FindProperty("m_Settings.Radius").floatValue = 0.035f;
+                so.FindProperty("m_Settings.DirectLightingStrength").floatValue = 0.35f;
+                so.FindProperty("m_Settings.Falloff").floatValue = 20f;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         [MenuItem("RE-Craft/Build Windows")]

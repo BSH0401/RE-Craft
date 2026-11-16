@@ -66,9 +66,15 @@ namespace ReCraft
             xrHole = Mat.XRay(new Color(2.0f, 1.6f, 0.2f, 1f), 0.5f);
             var sd = new PartDef();
             Color steel = new(0.75f, 0.76f, 0.8f);
-            sd.Cyl(0.006f, 0.003f, 0, 0.0015f, 0, Quaternion.identity, steel, 0.95f, 0.75f);
-            sd.Box(0.009f, 0.0012f, 0.0018f, 0, 0.0032f, 0, new Color(0.1f, 0.1f, 0.1f), 0.5f, 0.3f);
-            sd.Cyl(0.0025f, 0.012f, 0, -0.006f, 0, Quaternion.identity, steel, 0.95f, 0.6f);
+            // 십자 나사: 둥근 머리 + 십자 홈 + 나사산
+            Color slot = new(0.12f, 0.12f, 0.13f);
+            sd.Cyl(0.006f, 0.0022f, 0, 0.0011f, 0, Quaternion.identity, steel, 0.95f, 0.75f);
+            sd.Cone(0.0058f, 0.0036f, 0.0014f, 0, 0.0029f, 0, Quaternion.identity, steel, 0.95f, 0.8f);
+            sd.Box(0.0075f, 0.0012f, 0.0013f, 0, 0.0033f, 0, slot, 0.6f, 0.3f);
+            sd.Box(0.0013f, 0.0012f, 0.0075f, 0, 0.0033f, 0, slot, 0.6f, 0.3f);
+            sd.Cyl(0.0022f, 0.012f, 0, -0.006f, 0, Quaternion.identity, steel, 0.95f, 0.6f);
+            for (int i = 0; i < 5; i++) sd.Cyl(0.0027f, 0.0008f, 0, -0.0015f - i * 0.0022f, 0, Quaternion.identity, steel, 0.95f, 0.6f);
+            sd.Cone(0.0004f, 0.0022f, 0.0018f, 0, -0.0129f, 0, Quaternion.identity, steel, 0.95f, 0.6f);
             screwMesh = MeshGen.Combine(sd.shapes);
             ghost = new GameObject("Ghost");
             ghost.transform.SetParent(transform, false);
@@ -135,7 +141,7 @@ namespace ReCraft
                     s.homePos = sdef.pos;
                     s.homeRot = Quaternion.FromToRotation(Vector3.up, sdef.dir);
                     s.trayPos = new Vector3(-0.64f + (screwIdx % 14) * 0.03f, Room.BenchTop + 0.016f, 0.345f + (screwIdx / 14) * 0.03f);
-                    s.trayRot = Quaternion.Euler(0f, screwIdx * 47f, 0f);
+                    s.trayRot = Quaternion.Euler(0f, 90f + (screwIdx % 3 - 1) * 12f, 90f);
                     screwIdx++;
                     s.ApplyPose();
                     var hole = new GameObject("Hole") { layer = HoleLayer };
@@ -168,7 +174,16 @@ namespace ReCraft
             float ext = Mathf.Max(all.extents.x, Mathf.Max(all.extents.y, all.extents.z));
             it.scale = Mathf.Clamp(0.15f / ext, 1f, 1.8f);
             it.root.localScale = Vector3.one * it.scale;
-            foreach (var p in it.parts) p.radius *= it.scale;
+            float bound = 0f;
+            foreach (var p in it.parts)
+            {
+                bound = Mathf.Max(bound, p.homePos.magnitude + p.radius);
+                p.radius *= it.scale;
+            }
+            // 거치대를 물건 바로 아래까지 올린다 (어느 방향으로 돌려도 닿지 않게 외접구 기준)
+            Room.SetStand(ItemCenter.y - bound * it.scale - 0.004f);
+            // 트레이 위 나사는 옆으로 눕힌다
+            foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale;
             item = it;
             zoomTarget = 1.3f;
             SetTool(Tool.Hand);
@@ -601,6 +616,7 @@ namespace ReCraft
         void Update()
         {
             zoom = Mathf.Lerp(zoom, zoomTarget, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
+            Room.FocusAt(zoom);
             cam.transform.position = Target + CamDir * zoom + Fx.ShakeOffset;
             cam.transform.rotation = Quaternion.LookRotation(Target - (Target + CamDir * zoom), Vector3.up);
 
@@ -667,10 +683,13 @@ namespace ReCraft
         void LateUpdate()
         {
             if (item == null) return;
+            UpdateStand();
             float k = 1f - Mathf.Exp(-14f * Time.deltaTime);
             foreach (var p in item.parts)
             {
                 if (p.attached || p.busy || p == dragPart) continue;
+                // 트레이 바닥에 닿도록 높이를 맞춘다 (회전에 따라 바뀌는 바닥면 기준)
+                p.trayPos.y = Room.TrayTop + 0.001f + (p.transform.position.y - p.mr.bounds.min.y);
                 p.transform.position = Vector3.Lerp(p.transform.position, p.trayPos, k);
                 p.transform.rotation = item.root.rotation;
             }
@@ -682,6 +701,23 @@ namespace ReCraft
                 s.transform.position = Vector3.Lerp(s.transform.position, s.trayPos, k);
                 s.transform.rotation = Quaternion.Slerp(s.transform.rotation, s.trayRot, k);
             }
+        }
+
+        /// <summary>거치대가 물건의 실제 가장 낮은 점을 받치도록 매 프레임 높이를 맞춘다.</summary>
+        void UpdateStand()
+        {
+            float minY = float.MaxValue;
+            foreach (var p in item.parts)
+            {
+                if (!p.attached || p.busy) continue;
+                var m = p.transform.localToWorldMatrix;
+                foreach (var v in p.verts)
+                {
+                    float y = m.m10 * v.x + m.m11 * v.y + m.m12 * v.z + m.m13;
+                    if (y < minY) minY = y;
+                }
+            }
+            if (minY < float.MaxValue) Room.SetStand(Mathf.Max(minY - 0.0015f, Room.BenchTop + 0.03f));
         }
 
         void Pick(Vector2 mp, out Part part, out Screw screw, out RaycastHit hit)

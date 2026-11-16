@@ -11,7 +11,7 @@ namespace ReCraft
     {
         public static readonly Color Bg = new(0.07f, 0.065f, 0.06f, 0.93f);
         public static readonly Color BgLight = new(0.17f, 0.15f, 0.13f, 0.96f);
-        public static readonly Color Accent = new(1f, 0.72f, 0.25f);
+        public static readonly Color Accent = Palette.Accent;
         public static readonly Color TextCol = new(0.95f, 0.92f, 0.86f);
         public static readonly Color Dim = new(0.62f, 0.59f, 0.55f);
         public static readonly Color Good = new(0.45f, 0.85f, 0.5f);

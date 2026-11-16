@@ -22,6 +22,7 @@ namespace ReCraft
         public Material mat;
         public MeshRenderer mr;
         public Mesh mesh;
+        public Vector3[] verts;   // 거치대 높이 계산용 (로컬 정점)
 
         // 마스크: 텍셀마다 부품 로컬 좌표를 구워 두고, 브러시는 3D 거리로 판정한다.
         int res;
@@ -55,6 +56,7 @@ namespace ReCraft
         public void Build(PartDef d, ItemInstance it, Mesh m, float atlas)
         {
             def = d; item = it; mesh = m; atlasSize = atlas;
+            verts = m.vertices;
             gameObject.AddComponent<MeshFilter>().sharedMesh = m;
             mr = gameObject.AddComponent<MeshRenderer>();
             mat = Mat.Surface();
