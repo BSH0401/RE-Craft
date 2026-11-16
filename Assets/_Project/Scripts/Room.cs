@@ -11,7 +11,6 @@ namespace ReCraft
         public const float TrayTop = BenchTop + 0.011f;       // 부품 트레이 바닥 윗면
         public const float ScrewTrayTop = BenchTop + 0.012f;  // 나사 트레이 바닥 윗면
         public static DepthOfField Dof;
-        static Transform standRod, standTop;
 
         static readonly Quaternion AxZ = Quaternion.Euler(90, 0, 0);
 
@@ -34,16 +33,16 @@ namespace ReCraft
             var wood = Make(0f, 1f);
 
             // ── 바닥 · 벽 ──
-            Prop(root, "Floor", Make(1f, 0.5f), new PartDef().Box(7, .1f, 7, 0, -.05f, 0, Palette.Floor, 0, .45f));
+            Prop(root, "Floor", Make(1f, 0.5f), new PartDef().Box(7.6f, .1f, 7, .6f, -.05f, 0, Palette.Floor, 0, .45f));
             Prop(root, "Walls", Make(2f), new PartDef()
-                .Box(7, 3.4f, .1f, 0, 1.7f, 1.7f, Palette.Wall, 0, .15f)
+                .Box(7.6f, 3.4f, .1f, .6f, 1.7f, 1.7f, Palette.Wall, 0, .15f)
                 .Box(.1f, 3.4f, 7, -3.2f, 1.7f, 0, Palette.Wall, 0, .15f)
-                .Box(.1f, 3.4f, 7, 3.2f, 1.7f, 0, Palette.Wall, 0, .15f));
+                .Box(.1f, 3.4f, 7, 4.4f, 1.7f, 0, Palette.Wall, 0, .15f));
             var panel = new PartDef()
-                .Box(6.3f, 1.0f, .03f, 0, .5f, 1.635f, Palette.Wainscot, 0, .35f)
-                .Box(6.3f, .05f, .05f, 0, 1.02f, 1.625f, Palette.Trim, 0, .4f)
-                .Box(6.3f, .12f, .04f, 0, .06f, 1.61f, Palette.Trim, 0, .35f);
-            panel.Box(6.3f, .035f, .02f, 0, .55f, 1.615f, Palette.Trim, 0, .4f);
+                .Box(7.5f, 1.0f, .03f, .6f, .5f, 1.635f, Palette.Wainscot, 0, .35f)
+                .Box(7.5f, .05f, .05f, .6f, 1.02f, 1.625f, Palette.Trim, 0, .4f)
+                .Box(7.5f, .12f, .04f, .6f, .06f, 1.61f, Palette.Trim, 0, .35f);
+            panel.Box(7.5f, .035f, .02f, .6f, .55f, 1.615f, Palette.Trim, 0, .4f);
             Prop(root, "Wainscot", wood, panel);
 
             // ── 창문 (뒷벽 왼쪽): 차가운 하늘빛이 은은히 번진다 ──
@@ -62,6 +61,68 @@ namespace ReCraft
                 .Ball(.06f, -1.3f, 1.57f, 1.58f, Palette.Props, 0, .3f)
                 .Ball(.045f, -1.26f, 1.62f, 1.56f, Palette.Props * 1.15f, 0, .3f)
                 .Ball(.04f, -1.34f, 1.61f, 1.6f, Palette.Props * 0.9f, 0, .3f));
+
+            // ── 뒷벽 공구판 + 공구 ──
+            Prop(root, "Pegboard", Make(3f), new PartDef().Box(1.6f, .8f, .02f, .55f, 1.78f, 1.6f, Palette.Peg, 0, .3f));
+            Color steel = Palette.Steel, red = Palette.PropsAlt, yellow = Palette.Accent, olive = Palette.Props;
+            var tools = new PartDef();
+            for (int i = 0; i < 5; i++)
+            {
+                float x = -.1f + i * .1f;
+                tools.Cyl(.005f, .16f, x, 1.83f, 1.575f, Quaternion.identity, steel, .95f, .75f);
+                tools.Cyl(.016f, .1f, x, 1.96f, 1.575f, Quaternion.identity, i % 2 == 0 ? red : yellow, 0, .55f);
+            }
+            tools.Box(.03f, .26f, .025f, .5f, 1.75f, 1.575f, Palette.Wainscot, 0, .45f).Box(.13f, .05f, .045f, .5f, 1.89f, 1.575f, steel, .95f, .6f);
+            tools.Box(.024f, .3f, .01f, .66f, 1.76f, 1.58f, steel, .95f, .7f).Tube(.032f, .018f, .01f, .66f, 1.93f, 1.58f, AxZ, steel, .95f, .7f);
+            tools.Box(.02f, .24f, .01f, .78f, 1.74f, 1.58f, steel, .95f, .7f).Tube(.026f, .015f, .01f, .78f, 1.875f, 1.58f, AxZ, steel, .95f, .7f);
+            tools.Box(.018f, .2f, .016f, .9f, 1.75f, 1.578f, olive, .1f, .5f, false, Quaternion.Euler(0, 0, 8)).Box(.018f, .2f, .016f, .93f, 1.75f, 1.578f, olive, .1f, .5f, false, Quaternion.Euler(0, 0, -8));
+            tools.Box(.3f, .02f, .012f, 1.12f, 1.98f, 1.582f, Palette.Tray, .6f, .5f).Box(.02f, .3f, .012f, .985f, 1.84f, 1.582f, Palette.Tray, .6f, .5f);
+            for (int i = 0; i < 4; i++) tools.Cyl(.035f - i * .005f, .02f, 1.15f, 1.6f + i * .045f, 1.58f, AxZ, i % 2 == 0 ? red : olive, .1f, .5f);
+            Prop(root, "Tools", plain, tools);
+
+            // ── 선반 ──
+            var shelf = new PartDef()
+                .Box(1.1f, .03f, .24f, 2.1f, 1.55f, 1.55f, Palette.Wainscot, 0, .4f)
+                .Box(1.1f, .03f, .24f, 2.1f, 2.0f, 1.55f, Palette.Wainscot, 0, .4f)
+                .Box(1.1f, .03f, .24f, -2.55f, 1.55f, 1.55f, Palette.Wainscot, 0, .4f);
+            Color[] jar = { Palette.PropsAlt, Palette.Props, Palette.Accent, Palette.Tray, Palette.Wainscot };
+            for (int i = 0; i < 4; i++)
+            {
+                shelf.Cyl(.05f, .13f + (i % 3) * .03f, 1.7f + i * .2f, 1.63f + (i % 3) * .015f, 1.55f, Quaternion.identity, jar[i], .1f, .7f);
+                shelf.Box(.16f, .1f + (i % 2) * .05f, .16f, 1.75f + i * .22f, 2.065f + (i % 2) * .025f, 1.55f, jar[(i + 2) % 5], 0, .4f);
+            }
+            shelf.Box(.26f, .14f, .1f, -2.55f, 1.635f, 1.55f, Palette.Props, .1f, .5f).Box(.08f, .03f, .004f, -2.6f, 1.66f, 1.498f, Color.Lerp(Palette.Accent, Color.white, .5f), 0, .6f);
+            shelf.Cyl(.008f, .2f, -2.45f, 1.8f, 1.55f, Quaternion.identity, steel, .95f, .7f);
+            Prop(root, "Shelves", wood, shelf);
+
+            Lights(root);
+            Environment();
+        }
+
+        /// <summary>작업대 한 세트: 작업대 · 매트 · 트레이 · 거치대 · 스탠드. 다중 작업대는 이것을 옆에 하나 더 짓는다.</summary>
+        public class Station
+        {
+            public Transform root, standRod, standTop;
+
+            /// <summary>거치대 윗면 높이(월드 Y)를 정한다.</summary>
+            public void SetStand(float topY)
+            {
+                if (!standRod) return;
+                float baseY = BenchTop + .02f;
+                float h = Mathf.Max(.005f, topY - root.position.y - .01f - baseY);
+                standRod.localPosition = new Vector3(0, baseY, 0);
+                standRod.localScale = new Vector3(1f, h, 1f);
+                standTop.localPosition = new Vector3(0, topY - root.position.y - .004f, 0);
+            }
+        }
+
+        public static Station BuildStation(Transform parent, Vector3 origin, int number)
+        {
+            var root = new GameObject("Station" + number).transform;
+            root.SetParent(parent, false);
+            root.localPosition = origin;
+            var plain = Make();
+            var wood = Make(0f, 1f);
 
             // ── 작업대 ──
             Color benchDark = Palette.BenchDark;
@@ -98,45 +159,13 @@ namespace ReCraft
             Prop(root, "StandBase", plain, new PartDef()
                 .Cyl(.06f, .012f, 0, BenchTop + .01f, 0, Quaternion.identity, Palette.Tray, .85f, .55f)
                 .Cyl(.045f, .004f, 0, BenchTop + .018f, 0, Quaternion.identity, Palette.Steel, .95f, .7f));
-            standRod = Prop(root, "StandRod", plain, new PartDef()
+            var standRod = Prop(root, "StandRod", plain, new PartDef()
                 .Cyl(.008f, 1f, 0, .5f, 0, Quaternion.identity, Palette.Steel, .95f, .75f)).transform;
-            standTop = Prop(root, "StandTop", plain, new PartDef()
+            var standTop = Prop(root, "StandTop", plain, new PartDef()
                 .Tube(.03f, .022f, .008f, 0, 0, 0, Quaternion.identity, Palette.Steel, .95f, .75f)
                 .Cyl(.012f, .01f, 0, -.006f, 0, Quaternion.identity, Palette.Tray, .85f, .5f)).transform;
-            SetStand(BenchTop + .08f);
-
-            // ── 뒷벽 공구판 + 공구 ──
-            Prop(root, "Pegboard", Make(3f), new PartDef().Box(1.6f, .8f, .02f, .55f, 1.78f, 1.6f, Palette.Peg, 0, .3f));
-            Color steel = Palette.Steel, red = Palette.PropsAlt, yellow = Palette.Accent, olive = Palette.Props;
-            var tools = new PartDef();
-            for (int i = 0; i < 5; i++)
-            {
-                float x = -.1f + i * .1f;
-                tools.Cyl(.005f, .16f, x, 1.83f, 1.575f, Quaternion.identity, steel, .95f, .75f);
-                tools.Cyl(.016f, .1f, x, 1.96f, 1.575f, Quaternion.identity, i % 2 == 0 ? red : yellow, 0, .55f);
-            }
-            tools.Box(.03f, .26f, .025f, .5f, 1.75f, 1.575f, Palette.Wainscot, 0, .45f).Box(.13f, .05f, .045f, .5f, 1.89f, 1.575f, steel, .95f, .6f);
-            tools.Box(.024f, .3f, .01f, .66f, 1.76f, 1.58f, steel, .95f, .7f).Tube(.032f, .018f, .01f, .66f, 1.93f, 1.58f, AxZ, steel, .95f, .7f);
-            tools.Box(.02f, .24f, .01f, .78f, 1.74f, 1.58f, steel, .95f, .7f).Tube(.026f, .015f, .01f, .78f, 1.875f, 1.58f, AxZ, steel, .95f, .7f);
-            tools.Box(.018f, .2f, .016f, .9f, 1.75f, 1.578f, olive, .1f, .5f, false, Quaternion.Euler(0, 0, 8)).Box(.018f, .2f, .016f, .93f, 1.75f, 1.578f, olive, .1f, .5f, false, Quaternion.Euler(0, 0, -8));
-            tools.Box(.3f, .02f, .012f, 1.12f, 1.98f, 1.582f, Palette.Tray, .6f, .5f).Box(.02f, .3f, .012f, .985f, 1.84f, 1.582f, Palette.Tray, .6f, .5f);
-            for (int i = 0; i < 4; i++) tools.Cyl(.035f - i * .005f, .02f, 1.15f, 1.6f + i * .045f, 1.58f, AxZ, i % 2 == 0 ? red : olive, .1f, .5f);
-            Prop(root, "Tools", plain, tools);
-
-            // ── 선반 ──
-            var shelf = new PartDef()
-                .Box(1.1f, .03f, .24f, 2.1f, 1.55f, 1.55f, Palette.Wainscot, 0, .4f)
-                .Box(1.1f, .03f, .24f, 2.1f, 2.0f, 1.55f, Palette.Wainscot, 0, .4f)
-                .Box(1.1f, .03f, .24f, -2.55f, 1.55f, 1.55f, Palette.Wainscot, 0, .4f);
-            Color[] jar = { Palette.PropsAlt, Palette.Props, Palette.Accent, Palette.Tray, Palette.Wainscot };
-            for (int i = 0; i < 4; i++)
-            {
-                shelf.Cyl(.05f, .13f + (i % 3) * .03f, 1.7f + i * .2f, 1.63f + (i % 3) * .015f, 1.55f, Quaternion.identity, jar[i], .1f, .7f);
-                shelf.Box(.16f, .1f + (i % 2) * .05f, .16f, 1.75f + i * .22f, 2.065f + (i % 2) * .025f, 1.55f, jar[(i + 2) % 5], 0, .4f);
-            }
-            shelf.Box(.26f, .14f, .1f, -2.55f, 1.635f, 1.55f, Palette.Props, .1f, .5f).Box(.08f, .03f, .004f, -2.6f, 1.66f, 1.498f, Color.Lerp(Palette.Accent, Color.white, .5f), 0, .6f);
-            shelf.Cyl(.008f, .2f, -2.45f, 1.8f, 1.55f, Quaternion.identity, steel, .95f, .7f);
-            Prop(root, "Shelves", wood, shelf);
+            var st = new Station { root = root, standRod = standRod, standTop = standTop };
+            st.SetStand(origin.y + BenchTop + .08f);
 
             // ── 스탠드 조명 ──
             var lampRoot = new Vector3(.95f, BenchTop, .38f);
@@ -149,19 +178,27 @@ namespace ReCraft
             var bulbPos = new Vector3(lampRoot.x - .31f, lampRoot.y + .685f, lampRoot.z - .255f);
             Prop(root, "Bulb", Make(emission: Palette.LampLight * 6f), new PartDef().Ball(.03f, bulbPos.x, bulbPos.y, bulbPos.z, Color.white, 0, .9f));
 
-            Lights(root, bulbPos);
-            Environment();
+            // 스탠드: 손 주변을 데우는 따뜻한 점광원
+            var lamp = new GameObject("LampLight").AddComponent<Light>();
+            lamp.transform.SetParent(root, false);
+            lamp.type = LightType.Point;
+            lamp.transform.localPosition = bulbPos + new Vector3(0, -.03f, 0);
+            lamp.color = Palette.LampLight;
+            lamp.intensity = 0.9f;
+            lamp.range = 1.5f;
+            lamp.shadows = LightShadows.Soft;
+            lamp.shadowStrength = 0.6f;
+
+            if (number > 1) BuildPlate(root, number);
+            return st;
         }
 
-        /// <summary>거치대 윗면 높이(월드 Y)를 정한다.</summary>
-        public static void SetStand(float topY)
+        /// <summary>두 번째부터는 작업대 앞에 번호 명판을 붙인다.</summary>
+        static void BuildPlate(Transform root, int number)
         {
-            if (!standRod) return;
-            float baseY = BenchTop + .02f;
-            float h = Mathf.Max(.005f, topY - .01f - baseY);
-            standRod.position = new Vector3(0, baseY, 0);
-            standRod.localScale = new Vector3(1f, h, 1f);
-            standTop.position = new Vector3(0, topY - .004f, 0);
+            var plate = new PartDef().Box(.16f, .05f, .006f, 0, BenchTop - .12f, -.468f, Palette.Accent, .6f, .6f);
+            for (int i = 0; i < number; i++) plate.Box(.008f, .03f, .003f, -.006f * (number - 1) + i * .012f, BenchTop - .12f, -.4725f, Palette.Trim, .2f, .5f);
+            Prop(root, "NumberPlate", Make(), plate);
         }
 
         static GameObject Prop(Transform parent, string name, Material m, PartDef def)
@@ -173,7 +210,7 @@ namespace ReCraft
             return go;
         }
 
-        static void Lights(Transform root, Vector3 bulbPos)
+        static void Lights(Transform root)
         {
             // 키 라이트: 왼쪽 앞 창으로 드는 늦은 오후 햇살
             var sun = new GameObject("KeyLight").AddComponent<Light>();
@@ -186,17 +223,6 @@ namespace ReCraft
             sun.shadowStrength = 0.85f;
             sun.shadowBias = 0.02f;
             sun.shadowNormalBias = 0.15f;
-
-            // 스탠드: 손 주변을 데우는 따뜻한 점광원
-            var lamp = new GameObject("LampLight").AddComponent<Light>();
-            lamp.transform.SetParent(root, false);
-            lamp.type = LightType.Point;
-            lamp.transform.position = bulbPos + new Vector3(0, -.03f, 0);
-            lamp.color = Palette.LampLight;
-            lamp.intensity = 0.9f;
-            lamp.range = 1.5f;
-            lamp.shadows = LightShadows.Soft;
-            lamp.shadowStrength = 0.6f;
 
             // 뒷벽 창: 차가운 하늘빛 보조광 (림 라이트 역할)
             var win = new GameObject("WindowFill").AddComponent<Light>();

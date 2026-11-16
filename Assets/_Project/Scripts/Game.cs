@@ -23,6 +23,7 @@ namespace ReCraft
         public int[] toolLv = { 1, 1, 1, 1, 1 };
         public bool autoOrder;
         public bool magTray;
+        public bool multiBench;
         public bool ended;
         public int tutorialStep;
         public int jobsDone;
@@ -69,6 +70,7 @@ namespace ReCraft
         };
         public const int AutoOrderCost = 220;
         public const int MagTrayCost = 260;
+        public const int MultiBenchCost = 600;
 
         public static int Lv(Tool t) => data.toolLv[(int)t];
         public static string LevelName(Tool t, int lv) => LevelNames[(int)t][Mathf.Clamp(lv, 1, 3) - 1];

@@ -42,20 +42,19 @@ namespace ReCraft
             Fx.Init(root);
             Room.Build(root.transform);
             var cam = Room.MakeCamera(root.transform);
-            var wbGo = new GameObject("Workbench");
-            wbGo.transform.SetParent(root.transform, false);
-            var wb = wbGo.AddComponent<Workbench>();
-            wb.cam = cam;
+            Workbench.Create(root.transform, 0, cam);
+            if (Flag("-multibench")) G.data.multiBench = true;
+            if (G.data.multiBench) Workbench.Create(root.transform, 1, cam);
             var hudGo = new GameObject("HUDRoot");
             hudGo.transform.SetParent(root.transform, false);
             hudGo.AddComponent<HUD>();
             if (Flag("-notutorial")) G.data.tutorialStep = Tutorial.Done;
             if (Arg("-tutorial") != null) G.data.tutorialStep = (int)ArgF("-tutorial", 0);
-            else if ((Flag("-autoplay") || Flag("-showcase")) && !Flag("-withtutorial")) G.data.tutorialStep = Tutorial.Done;
+            else if ((Flag("-autoplay") || Flag("-showcase") || Flag("-multitest")) && !Flag("-withtutorial")) G.data.tutorialStep = Tutorial.Done;
             hudGo.AddComponent<Tutorial>();
 
             Time.timeScale = ArgF("-timescale", 1f);
-            if (Flag("-autoplay") || Flag("-showcase")) root.AddComponent<DevBot>();
+            if (Flag("-autoplay") || Flag("-showcase") || Flag("-multitest")) root.AddComponent<DevBot>();
             else HUD.I.ShowBoard();
         }
     }

@@ -26,7 +26,16 @@ namespace ReCraft
     /// <summary>작업대: 아이템 생성, 회전/줌, 도구 조작, 분해·조립 규칙, 정산.</summary>
     public class Workbench : MonoBehaviour
     {
+        /// <summary>지금 보고 있는(입력·카메라를 맡은) 작업대.</summary>
         public static Workbench I;
+        public static readonly List<Workbench> All = new();
+        public const float StationGap = 2.55f;
+        public int index;
+        public Vector3 origin;
+        public Room.Station station;
+        static float switchT = 1f;
+        static Vector3 camFromPos;
+        static Quaternion camFromRot;
         public ItemInstance item;
         public Tool tool = Tool.Hand;
         public Camera cam;
@@ -36,9 +45,9 @@ namespace ReCraft
         public bool Busy => testing || autoBusy;
 
         const int ScrewLayer = 8, HoleLayer = 9;
-        static readonly Vector3 Target = new(0f, Room.BenchTop + 0.17f, 0f);
+        Vector3 Target => origin + new Vector3(0f, Room.BenchTop + 0.17f, 0f);
         static readonly Vector3 CamDir = new Vector3(0f, 0.46f, -1f).normalized;
-        static readonly Vector3 ItemCenter = new(0f, Room.BenchTop + 0.2f, 0f);
+        Vector3 ItemCenter => origin + new Vector3(0f, Room.BenchTop + 0.2f, 0f);
         float zoom = 1.3f, zoomTarget = 1.3f;
         bool rotating;
 
@@ -54,9 +63,61 @@ namespace ReCraft
         bool lastXray;
         float blockedToastTime, tickTimer;
 
+        /// <summary>작업대를 하나 짓는다 (0번 = 기본, 1번 = 다중 작업대 업그레이드).</summary>
+        public static Workbench Create(Transform parent, int index, Camera cam)
+        {
+            var go = new GameObject("Workbench" + (index + 1));
+            go.transform.SetParent(parent, false);
+            var wb = go.AddComponent<Workbench>();
+            wb.index = index;
+            wb.origin = new Vector3(index * StationGap, 0f, 0f);
+            wb.cam = cam;
+            wb.station = Room.BuildStation(parent, wb.origin, index + 1);
+            All.Add(wb);
+            if (I == null) I = wb;
+            return wb;
+        }
+
+        /// <summary>다른 작업대로 시선을 옮긴다. 떠나는 작업대의 세척·도색·배송은 계속 돌아간다.</summary>
+        public static void SwitchTo(int idx)
+        {
+            if (idx < 0 || idx >= All.Count || All[idx] == I) return;
+            var prev = I;
+            prev.OnLeave();
+            camFromPos = prev.cam.transform.position;
+            camFromRot = prev.cam.transform.rotation;
+            switchT = 0f;
+            I = All[idx];
+            Sfx.Play("whoosh", 0.5f);
+            HUD.I?.OnStationChanged();
+        }
+
+        public static void SwitchNext() => SwitchTo((I.index + 1) % All.Count);
+
+        public Workbench Other => All.Count > 1 ? All[(index + 1) % All.Count] : null;
+
+        void OnLeave()
+        {
+            if (dragPart != null) { dragPart = null; ghost.SetActive(false); }
+            SetHover(null, null);
+            rotating = false;
+            if (item != null) { xray = forceXray = false; ApplyXray(); }
+            HUD.Tip(null);
+            Sfx.Loop("sand", 0f); Sfx.Loop("cloth", 0f); Sfx.Loop("drill", 0f);
+            if (!autoBusy) Sfx.Loop("spray", 0f);
+        }
+
+        /// <summary>다른 작업대에서 일어난 일은 번호를 붙여 알린다.</summary>
+        void Say(string msg) => HUD.Toast(this == I || All.Count < 2 ? msg : $"[작업대 {index + 1}] {msg}");
+
+        void StopLoopsIfIdle()
+        {
+            foreach (var w in All) if (w != this && (w.autoBusy || w.testing)) return;
+            Sfx.StopLoops();
+        }
+
         void Awake()
         {
-            I = this;
             Physics.autoSyncTransforms = true;
             xrBase = Mat.XRay(new Color(0.15f, 0.6f, 0.9f, 0.5f), 0.04f);
             xrYellow = Mat.XRay(new Color(2.5f, 2.0f, 0.2f, 1f), 0.6f);
@@ -141,7 +202,7 @@ namespace ReCraft
                     s.owner = p; s.item = it;
                     s.homePos = sdef.pos;
                     s.homeRot = Quaternion.FromToRotation(Vector3.up, sdef.dir);
-                    s.trayPos = new Vector3(-0.64f + (screwIdx % 14) * 0.03f, Room.BenchTop + 0.016f, 0.345f + (screwIdx / 14) * 0.03f);
+                    s.trayPos = new Vector3(origin.x - 0.64f + (screwIdx % 14) * 0.03f, Room.BenchTop + 0.016f, 0.345f + (screwIdx / 14) * 0.03f);
                     s.trayRot = Quaternion.Euler(0f, 90f + (screwIdx % 3 - 1) * 12f, 90f);
                     screwIdx++;
                     s.ApplyPose();
@@ -183,7 +244,7 @@ namespace ReCraft
                 p.radius *= it.scale;
             }
             // 거치대를 물건 바로 아래까지 올린다 (어느 방향으로 돌려도 닿지 않게 외접구 기준)
-            Room.SetStand(ItemCenter.y - bound * it.scale - 0.004f);
+            station.SetStand(ItemCenter.y - bound * it.scale - 0.004f);
             // 트레이 위 나사는 옆으로 눕힌다
             foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale * def.screwScale;
             item = it;
@@ -197,7 +258,7 @@ namespace ReCraft
         {
             StopAllCoroutines();
             testing = autoBusy = false;
-            Sfx.StopLoops();
+            StopLoopsIfIdle();
             if (ghost) { ghost.transform.SetParent(transform, false); ghost.SetActive(false); }
             lastXray = false;
             if (item != null)
@@ -335,7 +396,7 @@ namespace ReCraft
                         foreach (var q in item.parts)
                         {
                             if (q == p || q.attached) continue;
-                            float dx = q.trayPos.x - x, dz = q.trayPos.z - z;
+                            float dx = q.trayPos.x - origin.x - x, dz = q.trayPos.z - z;
                             float min = r + Foot(q) + 0.008f;
                             float d = Mathf.Sqrt(dx * dx + dz * dz);
                             if (d < min) overlap += min - d;
@@ -350,7 +411,9 @@ namespace ReCraft
                         float score = ax + (z + 0.26f) * 0.35f + (sign < 0 ? 0.01f : 0f) + (onTray ? 0f : 2f);
                         if (score < bestScore) { bestScore = score; best = new Vector3(x, y, z); }
                     }
-            return found ? best : fallback;
+            Vector3 spot = found ? best : fallback;
+            spot.x += origin.x;
+            return spot;
         }
 
         /// <summary>트레이 위 점유 반지름: 가장 긴 변 기준 (얇은 원판이 대각선 크기로 자리를 낭비하지 않게).</summary>
@@ -423,12 +486,12 @@ namespace ReCraft
         public void Order(Part p)
         {
             if (!p.NeedsReplace || p.ordered) return;
-            if (p.attached) { HUD.Toast("파손 부품을 먼저 분리하세요"); return; }
-            if (!G.Spend(p.def.price)) { HUD.Toast($"골드가 부족합니다 ({p.def.price}G 필요)"); Sfx.Play("error"); return; }
+            if (p.attached) { Say("파손 부품을 먼저 분리하세요"); return; }
+            if (!G.Spend(p.def.price)) { Say($"골드가 부족합니다 ({p.def.price}G 필요)"); Sfx.Play("error"); return; }
             p.ordered = true;
             item.spentOnParts += p.def.price;
             Sfx.Play("click");
-            HUD.Toast($"'{p.def.name}' 주문 완료 — 드론 배송 중...");
+            Say($"'{p.def.name}' 주문 완료 — 드론 배송 중...");
             StartCoroutine(DeliverPart(p));
             HUD.I?.OnItemChanged();
         }
@@ -440,7 +503,7 @@ namespace ReCraft
             Sfx.Play("whoosh", 0.6f);
             Sfx.Play("sparkle", 0.8f);
             Fx.Spark(p.transform.position, new Color(0.6f, 0.9f, 1f), 24, Mathf.Min(p.radius, 0.05f));
-            HUD.Toast($"새 '{p.def.name}' 도착!");
+            Say($"새 '{p.def.name}' 도착!");
         }
 
         public void ReplaceNow(Part p)
@@ -486,7 +549,7 @@ namespace ReCraft
             foreach (var p in item.parts) p.StepAll(channel, 1f);
             Sfx.Loop(loop, 0f);
             Sfx.Play("chime", 0.7f);
-            HUD.Toast(done);
+            Say(done);
             autoBusy = false;
             HUD.I?.OnItemChanged();
         }
@@ -497,7 +560,7 @@ namespace ReCraft
         {
             if (item == null || Busy) return;
             var st = Stats();
-            if (!st.assembled) { HUD.Toast("조립을 모두 마친 뒤 테스트할 수 있습니다"); Sfx.Play("error"); return; }
+            if (!st.assembled) { Say("조립을 모두 마친 뒤 테스트할 수 있습니다"); Sfx.Play("error"); return; }
             StartCoroutine(TestRoutine());
         }
 
@@ -511,7 +574,7 @@ namespace ReCraft
             if (!ok)
             {
                 Sfx.Play("error");
-                HUD.Toast("작동하지 않습니다 — 파손 부품을 교체하세요");
+                Say("작동하지 않습니다 — 파손 부품을 교체하세요");
                 testing = false;
                 yield break;
             }
@@ -557,11 +620,11 @@ namespace ReCraft
                 p.transform.localRotation = Quaternion.identity;
                 p.SetGlow(Color.black);
             }
-            Sfx.StopLoops();
+            StopLoopsIfIdle();
             Sfx.Play("chime", 0.8f);
             item.tested = true;
             testing = false;
-            HUD.Toast("작동 테스트 성공! 납품 보너스 +15%");
+            Say("작동 테스트 성공! 납품 보너스 +15%");
             HUD.I?.OnItemChanged();
         }
 
@@ -616,7 +679,7 @@ namespace ReCraft
         {
             if (item == null || Busy) return;
             var st = Stats();
-            if (!st.assembled) { HUD.Toast("조립이 끝나지 않았습니다 — 부품과 나사를 모두 제자리에!"); Sfx.Play("error"); return; }
+            if (!st.assembled) { Say("조립이 끝나지 않았습니다 — 부품과 나사를 모두 제자리에!"); Sfx.Play("error"); return; }
             var sc = Score();
             G.Earn(sc.payout, sc.stars);
             G.Record(item.def.id, sc.total);
@@ -636,7 +699,7 @@ namespace ReCraft
         {
             if (item == null) return;
             Clear();
-            HUD.Toast("의뢰를 포기했습니다");
+            Say("의뢰를 포기했습니다");
             HUD.I?.ShowBoard();
         }
 
@@ -644,10 +707,20 @@ namespace ReCraft
 
         void Update()
         {
+            if (this != I) return;   // 입력과 카메라는 보고 있는 작업대만 맡는다
             zoom = Mathf.Lerp(zoom, zoomTarget, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
             Room.FocusAt(zoom);
-            cam.transform.position = Target + CamDir * zoom + Fx.ShakeOffset;
-            cam.transform.rotation = Quaternion.LookRotation(Target - (Target + CamDir * zoom), Vector3.up);
+            Vector3 camPos = Target + CamDir * zoom;
+            Quaternion camRot = Quaternion.LookRotation(-CamDir, Vector3.up);
+            if (switchT < 1f)
+            {
+                switchT = Mathf.Min(1f, switchT + Time.unscaledDeltaTime / 0.5f);
+                float k = switchT * switchT * (3f - 2f * switchT);
+                camPos = Vector3.Lerp(camFromPos, camPos, k);
+                camRot = Quaternion.Slerp(camFromRot, camRot, k);
+            }
+            cam.transform.position = camPos + Fx.ShakeOffset;
+            cam.transform.rotation = camRot;
 
             var mouse = Mouse.current;
             var kb = Keyboard.current;
@@ -703,7 +776,7 @@ namespace ReCraft
             {
                 Sfx.Loop("sand", sand, G.Lv(Tool.Sander) == 1 ? 1f : 1.3f);
                 Sfx.Loop("cloth", cloth);
-                Sfx.Loop("spray", spray);
+                if (!All.Exists(w => w.autoBusy)) Sfx.Loop("spray", spray);
                 Sfx.Loop("drill", drill, G.Lv(Tool.Driver) == 3 ? 1.35f : 1f);
             }
             HUD.Tip(tip);
@@ -718,7 +791,7 @@ namespace ReCraft
             {
                 if (p.attached || p.busy || p == dragPart) continue;
                 // 트레이 바닥에 닿도록 높이를 맞춘다 (회전에 따라 바뀌는 바닥면 기준)
-                bool onTray = Mathf.Abs(Mathf.Abs(p.trayPos.x) - 0.6f) < 0.31f && p.trayPos.z > -0.34f && p.trayPos.z < 0.28f;
+                bool onTray = Mathf.Abs(Mathf.Abs(p.trayPos.x - origin.x) - 0.6f) < 0.31f && p.trayPos.z > -0.34f && p.trayPos.z < 0.28f;
                 p.trayPos.y = (onTray ? Room.TrayTop : Room.BenchTop) + 0.001f + (p.transform.position.y - p.mr.bounds.min.y);
                 p.transform.position = Vector3.Lerp(p.transform.position, p.trayPos, k);
                 p.transform.rotation = item.root.rotation;
@@ -747,7 +820,7 @@ namespace ReCraft
                     if (y < minY) minY = y;
                 }
             }
-            if (minY < float.MaxValue) Room.SetStand(Mathf.Max(minY - 0.0015f, Room.BenchTop + 0.03f));
+            if (minY < float.MaxValue) station.SetStand(Mathf.Max(minY - 0.0015f, Room.BenchTop + 0.03f));
         }
 
         void Pick(Vector2 mp, out Part part, out Screw screw, out RaycastHit hit)
@@ -755,7 +828,14 @@ namespace ReCraft
             part = null; screw = null; hit = default;
             Ray ray = cam.ScreenPointToRay(mp);
             int mask = tool == Tool.Driver ? ~0 : 1;
-            var hits = Physics.RaycastAll(ray, 6f, mask);
+            var all = Physics.RaycastAll(ray, 6f, mask);
+            var own = new List<RaycastHit>();
+            foreach (var h in all)
+            {
+                var hp = h.collider.GetComponent<Part>();
+                if (screwByCol.ContainsKey(h.collider) || (hp != null && hp.item == item)) own.Add(h);
+            }
+            var hits = own.ToArray();
             if (hits.Length == 0) return;
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             hit = hits[0];
@@ -813,7 +893,7 @@ namespace ReCraft
                 if (part.attached)
                 {
                     if (CanDetach(part, out string why)) Detach(part);
-                    else if (!string.IsNullOrEmpty(why)) { HUD.Toast(why); Sfx.Play("error", 0.6f); }
+                    else if (!string.IsNullOrEmpty(why)) { Say(why); Sfx.Play("error", 0.6f); }
                 }
                 else
                 {
@@ -850,7 +930,7 @@ namespace ReCraft
             if (!dragMoved || near)
             {
                 if (CanAttach(p, out string why)) Attach(p);
-                else if (!string.IsNullOrEmpty(why)) { HUD.Toast(why); Sfx.Play("error", 0.6f); }
+                else if (!string.IsNullOrEmpty(why)) { Say(why); Sfx.Play("error", 0.6f); }
             }
         }
 
@@ -911,7 +991,7 @@ namespace ReCraft
                 if (res == PaintResult.Blocked && Time.time > blockedToastTime)
                 {
                     blockedToastTime = Time.time + 2.5f;
-                    HUD.Toast("녹과 먼지를 먼저 제거해야 도색할 수 있습니다");
+                    Say("녹과 먼지를 먼저 제거해야 도색할 수 있습니다");
                 }
             }
             return tip;

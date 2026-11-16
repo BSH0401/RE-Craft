@@ -21,7 +21,7 @@ namespace ReCraft
             Active = true;
             shotDir = Boot.Arg("-shots");
             if (shotDir != null) Directory.CreateDirectory(shotDir);
-            StartCoroutine(Boot.Flag("-showcase") ? Showcase() : AutoPlay());
+            StartCoroutine(Boot.Flag("-showcase") ? Showcase() : Boot.Flag("-multitest") ? MultiTest() : AutoPlay());
         }
 
         IEnumerator Shot(string name)
@@ -185,6 +185,69 @@ namespace ReCraft
                 Debug.Log($"[Dev] showcase {it.id} parts={it.parts.Count} screws={it.ScrewCount} score={wb.Score().total}");
             }
             Finish();
+        }
+
+        /// <summary>
+        /// 다중 작업대 검증: 1번에서 초음파 세척을 돌려 둔 채 2번으로 옮겨 다른 물건을 분해하고,
+        /// 돌아와서 둘 다 납품한다. (-multitest -toollv 3)
+        /// </summary>
+        IEnumerator MultiTest()
+        {
+            if (Workbench.All.Count < 2)
+            {
+                G.data.multiBench = true;
+                var first = Workbench.All[0];
+                Workbench.Create(first.transform.parent, 1, first.cam);
+            }
+            var w0 = Workbench.All[0];
+            var w1 = Workbench.All[1];
+            HUD.I.ShowBoard();
+            yield return Wait(0.6f);
+            yield return Shot("board1");
+
+            HUD.I.Accept(new Offer { item = Items.Find("radio"), severity = 0.7f, reward = 90, seed = 11 });
+            yield return Wait(0.6f);
+            yield return Disassemble(w0);
+            foreach (var p in w0.item.parts) if (p.NeedsReplace) w0.ReplaceNow(p);
+            w0.UltrasonicClean();
+            Debug.Log($"[Dev] multi: station1 ultrasonic started busy={w0.autoBusy} dust={w0.Stats().dustDone:0.00}");
+            yield return Wait(0.3f);
+
+            Workbench.SwitchTo(1);
+            yield return Wait(0.7f);
+            Debug.Log($"[Dev] multi: switched active={Workbench.I.index + 1} overlay={HUD.I.OverlayName} station1 busy={w0.autoBusy}");
+            yield return Shot("board2");
+            HUD.I.Accept(new Offer { item = Items.Find("clock"), severity = 0.7f, reward = 110, seed = 22 });
+            yield return Wait(0.8f);
+            yield return Shot("station2_item");
+            yield return Disassemble(w1);
+            yield return Wait(1.2f);
+            yield return Shot("station2_parts");
+            Debug.Log($"[Dev] multi: station1 after background clean busy={w0.autoBusy} dust={w0.Stats().dustDone:0.00} item1={w0.item?.def.id} item2={w1.item?.def.id}");
+
+            Workbench.SwitchTo(0);
+            yield return Wait(0.7f);
+            yield return Shot("back_to_1");
+            yield return FinishJob(w0, "station1");
+            HUD.I.CloseOverlay();
+            Workbench.SwitchTo(1);
+            yield return Wait(0.7f);
+            yield return FinishJob(w1, "station2");
+            Finish();
+        }
+
+        IEnumerator FinishJob(Workbench wb, string label)
+        {
+            foreach (var p in wb.item.parts) { if (p.NeedsReplace) wb.ReplaceNow(p); p.StepAll(0, 1f); p.StepAll(1, 1f); p.SetPaintColor(null); p.StepAll(2, 1f); }
+            yield return Reassemble(wb);
+            wb.RunTest();
+            yield return Wait(0.5f);
+            while (wb.testing) yield return null;
+            var sc = wb.Score();
+            wb.Deliver();
+            Debug.Log($"[Dev] multi: {label} delivered {sc.itemName} score={sc.total} tested={sc.tested}");
+            yield return Wait(0.5f);
+            yield return Shot(label + "_result");
         }
 
         void Finish()

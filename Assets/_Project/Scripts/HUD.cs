@@ -14,6 +14,7 @@ namespace ReCraft
         RectTransform tipRect, workRoot, toolbar, palette, actions, brokenList, overlay;
         Image toastBg;
         readonly Button[] toolBtns = new Button[5];
+        Button stationBtn;
         Button testBtn, deliverBtn, ultraBtn, boothBtn;
         float toastTime, refreshTimer;
         string tipValue;
@@ -46,6 +47,7 @@ namespace ReCraft
             itemText = UI.Label(top, "", 26, UI.TextCol, TextAnchor.MiddleCenter, V(0.5f, 0.5f), UI.Center, V(60, 0), V(700, 60));
             UI.Btn(top, "도감", V(1, 0.5f), V(1, 0.5f), V(-20, 0), V(120, 46), ShowCatalog);
             UI.Btn(top, "업그레이드", V(1, 0.5f), V(1, 0.5f), V(-150, 0), V(160, 46), ShowUpgrades);
+            stationBtn = UI.Btn(top, "", V(1, 0.5f), V(1, 0.5f), V(-320, 0), V(240, 46), () => Workbench.SwitchNext(), new Color(0.22f, 0.3f, 0.36f, 0.96f), 20);
 
             // 작업 중 UI
             workRoot = UI.Stretch(root, "Work");
@@ -101,6 +103,27 @@ namespace ReCraft
         {
             Workbench.I.paintColor = c;
             Toast(c.HasValue ? "선택한 색으로 도색합니다" : "원래 색으로 복원 도색합니다");
+        }
+
+        /// <summary>상단 작업대 전환 버튼: 지금 작업대 번호와 다른 작업대 상태.</summary>
+        void RefreshStation()
+        {
+            var other = Workbench.I != null ? Workbench.I.Other : null;
+            stationBtn.gameObject.SetActive(other != null);
+            if (other == null) return;
+            string state = other.item == null ? "비어 있음" : other.Busy ? "<color=#7fd4ff>작동 중</color>" : "대기 중";
+            UI.TextOf(stationBtn).text = $"<b>작업대 {Workbench.I.index + 1}</b>  ⇄  {other.index + 1} <size=15>({state})</size>  <size=15><color=#b8b0a4>Q</color></size>";
+        }
+
+        /// <summary>작업대를 옮겼을 때: 빈 작업대면 게시판, 아니면 작업 화면.</summary>
+        public void OnStationChanged()
+        {
+            if (Workbench.I.item == null) ShowBoard();
+            else if (OverlayName == "Board") CloseOverlay();
+            OnToolChanged();
+            OnItemChanged();
+            RefreshStation();
+            if (Workbench.All.Count > 1 && Workbench.I.item != null) Toast($"작업대 {Workbench.I.index + 1}");
         }
 
         void RefreshTop()
@@ -178,7 +201,10 @@ namespace ReCraft
         void Update()
         {
             refreshTimer -= Time.unscaledDeltaTime;
-            if (refreshTimer <= 0f) { refreshTimer = 0.15f; RefreshWork(); }
+            if (refreshTimer <= 0f) { refreshTimer = 0.15f; RefreshWork(); RefreshStation(); }
+            var kbd = Keyboard.current;
+            if (kbd != null && kbd.qKey.wasPressedThisFrame && Workbench.All.Count > 1 && (OverlayName == null || OverlayName == "Board"))
+                Workbench.SwitchNext();
             if (toastTime > 0f)
             {
                 toastTime -= Time.unscaledDeltaTime;
@@ -251,7 +277,7 @@ namespace ReCraft
         public void ShowBoard()
         {
             offers ??= G.MakeOffers(rng);
-            var p = OpenOverlay("Board", V(1500, 800), "의뢰 게시판");
+            var p = OpenOverlay("Board", V(1500, 800), Workbench.All.Count > 1 ? $"의뢰 게시판 — 작업대 {Workbench.I.index + 1}" : "의뢰 게시판");
             UI.Label(p, "낡은 물건을 받아 분해 → 녹 제거 → 세척 → 도색 → 부품 교체 → 재조립해 납품하세요. 복원도가 높을수록 보수와 명성(★)이 커집니다.", 21, UI.Dim, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(32, -76), V(1430, 60));
             float cw = offers.Count > 3 ? 345f : 460f;
             for (int i = 0; i < offers.Count; i++)
@@ -277,9 +303,12 @@ namespace ReCraft
                 : G.data.stars < G.FinalStars && !G.data.ended ? $"다음 해금: ★{G.FinalStars} — 전설의 의뢰 (유물 3점을 모두 복원하면 엔딩)"
                 : G.data.ended ? "모든 유물을 복원했습니다. 도감 100%에 도전해 보세요!" : $"전설의 유물 복원 {G.RelicsDone}/{G.Relics.Count} — 복원도 {G.RelicScore}% 이상으로 셋 모두 되살리면 엔딩";
             UI.Label(p, unlock, 22, UI.Accent, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 96), V(900, 36));
-            UI.Label(p, "조작: 우클릭 드래그 회전 · 휠 줌 · Tab X-Ray · 1 손(분리/조립) · 2 드라이버(꾹 누르기) · 3 녹 제거 · 4 세척 · 5 도색", 19, UI.Dim, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 30), V(1100, 60));
+            UI.Label(p, "조작: 우클릭 드래그 회전 · 휠 줌 · Tab X-Ray · 1 손(분리/조립) · 2 드라이버(꾹 누르기) · 3 녹 제거 · 4 세척 · 5 도색", 19, UI.Dim, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 22), V(640, 66));
             UI.Btn(p, "업그레이드 상점", V(1, 0), V(1, 0), V(-32, 28), V(220, 56), ShowUpgrades);
             UI.Btn(p, "도감", V(1, 0), V(1, 0), V(-262, 28), V(130, 56), ShowCatalog);
+            var otherWb = Workbench.I.Other;
+            if (otherWb != null && otherWb.item != null)
+                UI.Btn(p, $"작업대 {otherWb.index + 1}로 이동 (Q)", V(1, 0), V(1, 0), V(-412, 28), V(240, 56), () => Workbench.SwitchTo(otherWb.index), new Color(0.22f, 0.3f, 0.36f, 0.96f), 21);
             if (!Tutorial.Running)
                 UI.Btn(p, "튜토리얼 다시 보기", V(1, 1), V(1, 1), V(-196, -20), V(200, 46), () => { G.data.tutorialStep = 0; G.Save(); ShowBoard(); }, null, 20);
             UI.Btn(p, "게임 종료", V(1, 1), V(1, 1), V(-32, -20), V(150, 46), () => { G.Save(); Application.Quit(); }, new Color(0.3f, 0.12f, 0.1f, 0.9f), 20);
@@ -297,7 +326,7 @@ namespace ReCraft
 
         public void ShowUpgrades()
         {
-            var p = OpenOverlay("Upgrades", V(1200, 800), "업그레이드 상점");
+            var p = OpenOverlay("Upgrades", V(1200, 860), "업그레이드 상점");
             UI.Label(p, $"보유 골드  <color=#ffd24a>{G.data.gold} G</color>", 24, UI.TextCol, TextAnchor.MiddleRight, V(1, 1), V(1, 1), V(-32, -22), V(400, 40));
             string[] desc =
             {
@@ -319,12 +348,24 @@ namespace ReCraft
                 () => { if (!G.Spend(G.AutoOrderCost)) return false; G.data.autoOrder = true; G.Save(); return true; });
             UpgradeRow(p, row++, "<b>자석 나사 정리함</b>", "나사가 트레이에 자동 정렬 — 나사 작업 속도 +65%", G.data.magTray ? -1 : G.MagTrayCost,
                 () => { if (!G.Spend(G.MagTrayCost)) return false; G.data.magTray = true; G.Save(); return true; });
+            UpgradeRow(p, row++, "<b>다중 작업대</b>", "두 번째 작업대 — 세척·도색·부품 배송이 도는 동안 다른 물건을 작업 (Q로 전환)", G.data.multiBench ? -1 : G.MultiBenchCost,
+                () =>
+                {
+                    if (!G.Spend(G.MultiBenchCost)) return false;
+                    G.data.multiBench = true;
+                    G.Save();
+                    var first = Workbench.All[0];
+                    Workbench.Create(first.transform.parent, 1, first.cam);
+                    RefreshStation();
+                    Toast("두 번째 작업대가 들어왔습니다 — Q로 오갈 수 있습니다");
+                    return true;
+                });
             UI.Btn(p, "닫기", V(1, 0), V(1, 0), V(-32, 28), V(160, 56), CloseToBoardOrWork);
         }
 
         void UpgradeRow(Transform p, int row, string title, string desc, int cost, System.Func<bool> buy)
         {
-            var bg = UI.Panel(p, "Row", V(0, 1), V(0, 1), V(32, -90 - row * 98), V(1136, 88), UI.BgLight, false).transform;
+            var bg = UI.Panel(p, "Row", V(0, 1), V(0, 1), V(32, -90 - row * 94), V(1136, 86), UI.BgLight, false).transform;
             UI.Label(bg, title, 24, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(20, -10), V(860, 34));
             UI.Label(bg, desc, 19, UI.Dim, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(20, -48), V(860, 30));
             if (cost < 0)
