@@ -47,7 +47,8 @@ namespace ReCraft
         public static event Action Changed;
 
         public const int Tier2Stars = 8;
-        public const int FinalStars = 20;
+        public const int Tier3Stars = 18;
+        public const int FinalStars = 30;
 
         public static readonly string[] ToolNames = { "손", "드라이버", "녹 제거", "세척", "도색" };
         static readonly string[][] LevelNames =
@@ -146,7 +147,7 @@ namespace ReCraft
         {
             var pool = new List<ItemDef>();
             foreach (var it in Items.All)
-                if (it.tier == 1 || (it.tier == 2 && data.stars >= Tier2Stars)) pool.Add(it);
+                if (it.tier == 1 || (it.tier == 2 && data.stars >= Tier2Stars) || (it.tier == 3 && data.stars >= Tier3Stars)) pool.Add(it);
             var offers = new List<Offer>();
             var used = new HashSet<string>();
             for (int i = 0; i < 3; i++)
@@ -165,7 +166,7 @@ namespace ReCraft
                     reward = auction ? Mathf.RoundToInt(value * 1.6f / 5f) * 5 : value,
                 });
             }
-            if (data.stars >= FinalStars)
+            if (data.stars >= FinalStars || data.ended)
             {
                 var mb = Items.Find("musicbox");
                 offers.Add(new Offer { item = mb, severity = 0.9f, auction = false, cost = 0, reward = mb.value, seed = rng.Next() });

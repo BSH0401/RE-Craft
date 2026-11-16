@@ -263,7 +263,7 @@ namespace ReCraft
                 UI.Label(card, kind, 22, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(20, -16), V(cw - 40, 30));
                 UI.Label(card, $"<b>{o.item.name}</b>", 32, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(20, -50), V(cw - 40, 44));
                 UI.Label(card, o.item.blurb, 19, UI.Dim, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(20, -100), V(cw - 40, 60));
-                string tier = final ? "Tier 4 · 희귀 유물" : o.item.tier == 1 ? "Tier 1 · 일상 잡화" : "Tier 2 · 정밀 기기";
+                string tier = final ? "Tier 4 · 희귀 유물" : o.item.tier == 1 ? "Tier 1 · 일상 잡화" : o.item.tier == 2 ? "Tier 2 · 정밀 기기" : "Tier 3 · 기계·엔진";
                 var entry = G.Entry(o.item.id);
                 string info = $"{tier}\n부품 {o.item.parts.Count}개 · 나사 {o.item.ScrewCount}개\n손상도  {Severity(o.severity)}\n" +
                               (o.auction ? $"매입가  <color=#ff8a5a>-{o.cost} G</color>\n예상 판매가  <color=#ffd24a>{o.reward} G</color>" : $"보수  <color=#ffd24a>{o.reward} G</color>") +
@@ -273,7 +273,8 @@ namespace ReCraft
                 UI.Btn(card, o.auction ? $"낙찰받기 (-{o.cost} G)" : "수주하기", V(0.5f, 0), V(0.5f, 0), V(0, 20), V(cw - 40, 56), () => Accept(offer), new Color(0.5f, 0.34f, 0.1f, 0.98f));
             }
             string unlock = G.data.stars < G.Tier2Stars ? $"다음 해금: ★{G.Tier2Stars} — Tier 2 정밀 기기 의뢰"
-                : G.data.stars < G.FinalStars ? $"다음 해금: ★{G.FinalStars} — 전설의 의뢰 (엔딩)"
+                : G.data.stars < G.Tier3Stars ? $"다음 해금: ★{G.Tier3Stars} — Tier 3 기계·엔진 의뢰"
+                : G.data.stars < G.FinalStars && !G.data.ended ? $"다음 해금: ★{G.FinalStars} — 전설의 의뢰 (엔딩)"
                 : G.data.ended ? "모든 의뢰를 해금했습니다. 도감 100%에 도전해 보세요!" : "전설의 의뢰가 도착했습니다!";
             UI.Label(p, unlock, 22, UI.Accent, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 96), V(900, 36));
             UI.Label(p, "조작: 우클릭 드래그 회전 · 휠 줌 · Tab X-Ray · 1 손(분리/조립) · 2 드라이버(꾹 누르기) · 3 녹 제거 · 4 세척 · 5 도색", 19, UI.Dim, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 30), V(1100, 60));
@@ -349,14 +350,14 @@ namespace ReCraft
                 var it = all[i];
                 var e = G.Entry(it.id);
                 if (e != null) done++;
-                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 4) * 310, -90 - (i / 4) * 290), V(296, 274), UI.BgLight, false).transform;
-                string tier = it.tier == 4 ? "희귀 유물" : $"Tier {it.tier}";
-                bool known = e != null || it.tier == 1 || (it.tier == 2 && G.data.stars >= G.Tier2Stars) || (it.tier == 4 && G.data.stars >= G.FinalStars);
-                UI.Label(card, $"<color=#9a948a>{tier}</color>", 19, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -14), V(260, 26));
-                UI.Label(card, known ? $"<b>{it.name}</b>" : "<b>???</b>", 28, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -44), V(260, 40));
-                UI.Label(card, known ? it.blurb : "아직 만나지 못한 물건", 18, UI.Dim, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -92), V(260, 70));
+                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 5) * 248, -90 - (i / 5) * 290), V(236, 274), UI.BgLight, false).transform;
+                string tier = it.tier == 4 ? "희귀 유물" : it.tier == 3 ? "Tier 3 · 기계·엔진" : it.tier == 2 ? "Tier 2 · 정밀 기기" : "Tier 1 · 일상 잡화";
+                bool known = e != null || it.tier == 1 || (it.tier == 2 && G.data.stars >= G.Tier2Stars) || (it.tier == 3 && G.data.stars >= G.Tier3Stars) || (it.tier == 4 && (G.data.stars >= G.FinalStars || G.data.ended));
+                UI.Label(card, $"<color=#9a948a>{tier}</color>", 19, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -14), V(200, 26));
+                UI.Label(card, known ? $"<b>{it.name}</b>" : "<b>???</b>", 24, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -44), V(205, 64));
+                UI.Label(card, known ? it.blurb : "아직 만나지 못한 물건", 17, UI.Dim, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -110), V(205, 80));
                 string rec = e != null ? $"최고 복원도  <color=#ffc24a>{e.best}%</color>\n납품 {e.count}회  {UI.Stars(e.best >= 95 ? 3 : e.best >= 80 ? 2 : e.best >= 60 ? 1 : 0)}" : "<color=#777777>미복원</color>";
-                UI.Label(card, rec, 22, UI.TextCol, TextAnchor.LowerLeft, V(0, 0), V(0, 0), V(18, 16), V(260, 80));
+                UI.Label(card, rec, 20, UI.TextCol, TextAnchor.LowerLeft, V(0, 0), V(0, 0), V(18, 14), V(205, 70));
             }
             UI.Label(p, $"도감 달성률  <color=#ffc24a>{done}/{all.Count}</color>    납품 {G.data.jobsDone}회    명성 ★{G.data.stars}", 24, UI.TextCol, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 36), V(800, 40));
             UI.Btn(p, "닫기", V(1, 0), V(1, 0), V(-32, 28), V(160, 56), CloseToBoardOrWork);

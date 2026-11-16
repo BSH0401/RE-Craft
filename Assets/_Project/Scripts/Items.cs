@@ -4,7 +4,7 @@ using UnityEngine;
 namespace ReCraft
 {
     /// <summary>아이템 데이터. 부품의 "Under" 관계와 나사만 지정하면 분해/조립 순서가 자동으로 정해진다.</summary>
-    public static class Items
+    public static partial class Items
     {
         static readonly Quaternion AxZ = Quaternion.Euler(90, 0, 0);   // Y축 도형을 +Z로 눕힘 (아래면이 정면 -Z)
         static readonly Quaternion AxX = Quaternion.Euler(0, 0, -90);  // Y축 도형을 +X로 눕힘
@@ -23,7 +23,7 @@ namespace ReCraft
         static readonly Color Wood = C(0.45f, 0.26f, 0.13f);
 
         static List<ItemDef> all;
-        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), MusicBox() };
+        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), Engine(), Arcade(), Generator(), MusicBox() };
 
         public static ItemDef Find(string id) => All.Find(i => i.id == id);
 

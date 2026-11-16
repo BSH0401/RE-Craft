@@ -81,6 +81,18 @@ namespace ReCraft
             });
             Make("clunk", 0.9f, t => Sin(t, 90) * Env(t, 14) * 0.9f + Noise() * Env(t, 50) * 0.4f + (t > 0.55f ? (Sin(t, 1400) * 0.4f + Noise() * 0.3f) * Env(t - 0.55f, 30) : 0f));
             Make("melody", 9.5f, Melody);
+            Make("arcade", 3.0f, t =>
+            {
+                // 오락실 칩튠: 코인 효과음 → 짧은 아르페지오 팡파르
+                float[] notes = { 988, 1319, 0, 523, 659, 784, 1047, 784, 1047, 1319, 1568, 2093 };
+                float step = t < 0.24f ? 0.12f : 0.2f;
+                int k = t < 0.24f ? (int)(t / 0.12f) : 2 + (int)((t - 0.24f) / 0.2f);
+                if (k >= notes.Length || notes[k] <= 0f) return 0f;
+                float lt = t < 0.24f ? t - k * 0.12f : t - 0.24f - (k - 2) * 0.2f;
+                float sq = Mathf.Sign(Sin(t, notes[k]));
+                float tri = Mathf.PingPong(t * notes[k] * 0.5f * 4f, 2f) - 1f;
+                return (sq * 0.12f + tri * 0.06f) * Env(lt, 5f) * (lt < step ? 1f : 0f);
+            });
 
             lp = 0f;
             float lp2 = 0f;
@@ -88,6 +100,12 @@ namespace ReCraft
             MakeLoop("cloth", 1.2f, t => { lp += (Noise() - lp) * 0.06f; return lp * (0.6f + 0.4f * Sin(t, 3.3f)) * 1.4f; });
             MakeLoop("spray", 1.0f, t => { float nz = Noise(); lp += (nz - lp) * 0.5f; return (nz - lp) * 0.55f; });
             MakeLoop("drill", 0.8f, t => (Mathf.Repeat(t * 170f, 1f) - 0.5f) * 0.35f + Sin(t, 340) * 0.12f + Noise() * 0.08f);
+            // 단기통 엔진 공회전: 초당 11번 '툴' 하는 폭발음 + 배기 잡음
+            MakeLoop("engine", 1.0f, t =>
+            {
+                float ph = Mathf.Repeat(t * 11f, 1f) / 11f;
+                return (Sin(ph, 52) * 0.7f + Sin(ph, 104) * 0.25f + Noise() * 0.25f) * Env(ph, 38) + Sin(t, 33) * 0.08f;
+            });
             MakeLoop("hum", 1.0f, t => Sin(t, 100) * 0.25f + Sin(t, 200) * 0.1f + Sin(t, 50) * 0.2f);
             MakeLoop("static", 1.0f, t => { lp += (Noise() - lp) * 0.3f; return lp * 0.25f + Sin(t, 440 + 30 * Sin(t, 5)) * 0.08f; });
             MakeLoop("ultra", 1.0f, t => Sin(t, 3100 + 200 * Sin(t, 12)) * 0.06f + Sin(t, 60) * 0.2f + Noise() * 0.04f);

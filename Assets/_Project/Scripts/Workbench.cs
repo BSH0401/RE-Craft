@@ -104,7 +104,7 @@ namespace ReCraft
                 int j = rng.Next(i + 1);
                 (breakable[i], breakable[j]) = (breakable[j], breakable[i]);
             }
-            int nBroken = Mathf.Min(breakable.Count, 1 + (offer.severity > 0.55f ? 1 : 0) + (def.tier >= 2 ? 1 : 0));
+            int nBroken = Mathf.Min(breakable.Count, 1 + (offer.severity > 0.55f ? 1 : 0) + (def.tier >= 2 ? 1 : 0) + (def.tier == 3 ? 1 : 0));
             var broken = new HashSet<PartDef>(breakable.GetRange(0, nBroken));
 
             bool anyRust = false;
@@ -185,7 +185,8 @@ namespace ReCraft
             // 트레이 위 나사는 옆으로 눕힌다
             foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale;
             item = it;
-            zoomTarget = 1.3f;
+            // 부품이 많은 큰 물건은 작업대 전체가 보이도록 조금 물러선다
+            zoomTarget = def.tier == 3 ? 1.6f : 1.3f;
             SetTool(Tool.Hand);
             HUD.I?.OnItemChanged();
         }
@@ -317,11 +318,12 @@ namespace ReCraft
             float y = Room.BenchTop + Mathf.Clamp(r * 0.75f, 0.02f, 0.12f) + 0.012f;
             Vector3 best = new(0.6f, y, 0f);
             float bestScore = float.MaxValue;
-            for (float z = -0.26f; z <= 0.2f; z += 0.02f)
-                for (float ax = 0.3f; ax <= 0.92f; ax += 0.02f)
+            // 트레이를 먼저 채우고, 넘치면 작업대 나머지 공간으로
+            for (float z = -0.4f; z <= 0.28f; z += 0.02f)
+                for (float ax = 0.3f; ax <= 1.08f; ax += 0.02f)
                     for (int sign = -1; sign <= 1; sign += 2)
                     {
-                        if (ax - r < 0.26f) continue;
+                        if (ax - r < 0.26f || ax + r > 1.12f || z - r < -0.45f || z + r > 0.3f) continue;
                         float x = ax * sign;
                         bool ok = true;
                         foreach (var q in item.parts)
@@ -332,7 +334,8 @@ namespace ReCraft
                             if (dx * dx + dz * dz < min * min) { ok = false; break; }
                         }
                         if (!ok) continue;
-                        float score = ax + (z + 0.26f) * 0.35f + (sign < 0 ? 0.01f : 0f);
+                        bool onTray = ax - r > 0.29f && ax + r < 0.91f && z - r > -0.34f && z + r < 0.28f;
+                        float score = ax + (z + 0.26f) * 0.35f + (sign < 0 ? 0.01f : 0f) + (onTray ? 0f : 2f);
                         if (score < bestScore) { bestScore = score; best = new Vector3(x, y, z); }
                     }
             return best;
@@ -500,6 +503,8 @@ namespace ReCraft
                 case TestSound.Bell: Sfx.Play("bell", 0.8f); dur = 2.4f; break;
                 case TestSound.Melody: Sfx.Play("melody", 1f); dur = 9f; break;
                 case TestSound.Beep: Sfx.Play("beep", 0.8f); dur = 2.2f; break;
+                case TestSound.Engine: Sfx.Play("clunk", 0.9f); Sfx.Loop("engine", 0.75f); dur = 3.6f; break;
+                case TestSound.Arcade: Sfx.Play("arcade", 0.8f); dur = 3.0f; break;
                 default: Sfx.Play("clunk", 0.9f); Sfx.Loop("hum", 0.5f); break;
             }
             var root = item.root;
@@ -637,7 +642,7 @@ namespace ReCraft
             }
             float scroll = mouse.scroll.ReadValue().y;
             if (!overUI && Mathf.Abs(scroll) > 0.01f)
-                zoomTarget = Mathf.Clamp(zoomTarget * (1f - Mathf.Sign(scroll) * 0.12f), 0.38f, 1.5f);
+                zoomTarget = Mathf.Clamp(zoomTarget * (1f - Mathf.Sign(scroll) * 0.12f), 0.38f, 1.9f);
 
             if (kb.digit1Key.wasPressedThisFrame) SetTool(Tool.Hand);
             if (kb.digit2Key.wasPressedThisFrame) SetTool(Tool.Driver);
@@ -689,7 +694,8 @@ namespace ReCraft
             {
                 if (p.attached || p.busy || p == dragPart) continue;
                 // 트레이 바닥에 닿도록 높이를 맞춘다 (회전에 따라 바뀌는 바닥면 기준)
-                p.trayPos.y = Room.TrayTop + 0.001f + (p.transform.position.y - p.mr.bounds.min.y);
+                bool onTray = Mathf.Abs(Mathf.Abs(p.trayPos.x) - 0.6f) < 0.31f && p.trayPos.z > -0.34f && p.trayPos.z < 0.28f;
+                p.trayPos.y = (onTray ? Room.TrayTop : Room.BenchTop) + 0.001f + (p.transform.position.y - p.mr.bounds.min.y);
                 p.transform.position = Vector3.Lerp(p.transform.position, p.trayPos, k);
                 p.transform.rotation = item.root.rotation;
             }

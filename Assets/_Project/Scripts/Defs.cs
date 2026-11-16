@@ -5,7 +5,7 @@ namespace ReCraft
 {
     public enum Condition { Normal, Rusty, Broken }
     public enum AnimKind { None, Spin, Glow, Wobble }
-    public enum TestSound { Hum, Bell, Melody, Beep, Click }
+    public enum TestSound { Hum, Bell, Melody, Beep, Click, Engine, Arcade }
 
     public class ScrewDef
     {
