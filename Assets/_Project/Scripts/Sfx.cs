@@ -81,6 +81,36 @@ namespace ReCraft
             });
             Make("clunk", 0.9f, t => Sin(t, 90) * Env(t, 14) * 0.9f + Noise() * Env(t, 50) * 0.4f + (t > 0.55f ? (Sin(t, 1400) * 0.4f + Noise() * 0.3f) * Env(t - 0.55f, 30) : 0f));
             Make("melody", 9.5f, Melody);
+            // 타자기: 불규칙한 타닥 소리 → 끝에 '띵!' + 캐리지가 돌아가는 소리
+            var hits = new float[] { 0.05f, 0.14f, 0.21f, 0.33f, 0.4f, 0.47f, 0.6f, 0.68f, 0.77f, 0.85f, 0.98f, 1.06f, 1.13f, 1.25f, 1.33f, 1.4f };
+            Make("typing", 2.4f, t =>
+            {
+                float s = 0f;
+                foreach (float h in hits)
+                {
+                    float lt = t - h;
+                    if (lt >= 0f && lt < 0.06f) s += (Noise() * 0.55f + Sin(lt, 1500) * 0.35f + Sin(lt, 180) * 0.4f) * Env(lt, 70);
+                }
+                float bt = t - 1.55f;
+                if (bt >= 0f) s += (Sin(bt, 2350) * 0.5f + Sin(bt, 3520) * 0.25f) * Env(bt, 4) * 0.6f;
+                float ct = t - 1.75f;
+                if (ct >= 0f && ct < 0.45f) s += Noise() * 0.18f * Mathf.Sin(ct / 0.45f * Mathf.PI) + Mathf.Sign(Sin(ct, 40)) * 0.05f;
+                return s;
+            });
+            // LP: 지직거리는 잡음 위로 부드러운 화음 진행
+            Make("record", 4.2f, t =>
+            {
+                float crackle = Noise() * 0.035f + (rng.NextDouble() < 0.0012 ? Noise() * 0.5f : 0f);
+                float[][] chords = { new[] { 261.6f, 329.6f, 392f }, new[] { 220f, 261.6f, 329.6f }, new[] { 174.6f, 220f, 261.6f }, new[] { 196f, 246.9f, 293.7f } };
+                float fade = Mathf.Clamp01(t / 0.6f) * Mathf.Clamp01((4.2f - t) / 0.5f);
+                int k = Mathf.Min(3, (int)(t / 1.05f));
+                float lt = t - k * 1.05f;
+                float m = 0f;
+                foreach (float hz in chords[k]) m += Sin(t, hz) * 0.07f + Sin(t, hz * 2f) * 0.02f;
+                m *= 0.6f + 0.4f * Env(lt, 2.5f);
+                float mel = Sin(t, chords[k][2] * 2f) * 0.06f * Env(Mathf.Repeat(t, 0.35f), 6f);
+                return (m + mel) * fade + crackle;
+            });
             Make("arcade", 3.0f, t =>
             {
                 // 오락실 칩튠: 코인 효과음 → 짧은 아르페지오 팡파르

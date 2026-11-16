@@ -186,7 +186,7 @@ namespace ReCraft
             foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale;
             item = it;
             // 부품이 많은 큰 물건은 작업대 전체가 보이도록 조금 물러선다
-            zoomTarget = def.tier == 3 ? 1.6f : 1.3f;
+            zoomTarget = def.parts.Count >= 20 ? 1.6f : 1.3f;
             SetTool(Tool.Hand);
             HUD.I?.OnItemChanged();
         }
@@ -314,10 +314,14 @@ namespace ReCraft
 
         Vector3 FindSpot(Part p)
         {
-            float r = Mathf.Min(p.radius, 0.2f);
+            float r = Foot(p);
             float y = Room.BenchTop + Mathf.Clamp(r * 0.75f, 0.02f, 0.12f) + 0.012f;
             Vector3 best = new(0.6f, y, 0f);
             float bestScore = float.MaxValue;
+            // 빈자리가 하나도 없을 때를 대비해 가장 덜 겹치는 자리도 기억한다
+            Vector3 fallback = best;
+            float fallbackOverlap = float.MaxValue;
+            bool found = false;
             // 트레이를 먼저 채우고, 넘치면 작업대 나머지 공간으로
             for (float z = -0.4f; z <= 0.28f; z += 0.02f)
                 for (float ax = 0.3f; ax <= 1.08f; ax += 0.02f)
@@ -325,20 +329,33 @@ namespace ReCraft
                     {
                         if (ax - r < 0.26f || ax + r > 1.12f || z - r < -0.45f || z + r > 0.3f) continue;
                         float x = ax * sign;
-                        bool ok = true;
+                        float overlap = 0f;
                         foreach (var q in item.parts)
                         {
                             if (q == p || q.attached) continue;
                             float dx = q.trayPos.x - x, dz = q.trayPos.z - z;
-                            float min = r + Mathf.Min(q.radius, 0.2f) + 0.008f;
-                            if (dx * dx + dz * dz < min * min) { ok = false; break; }
+                            float min = r + Foot(q) + 0.008f;
+                            float d = Mathf.Sqrt(dx * dx + dz * dz);
+                            if (d < min) overlap += min - d;
                         }
-                        if (!ok) continue;
+                        if (overlap > 0f)
+                        {
+                            if (!found && overlap < fallbackOverlap) { fallbackOverlap = overlap; fallback = new Vector3(x, y, z); }
+                            continue;
+                        }
+                        found = true;
                         bool onTray = ax - r > 0.29f && ax + r < 0.91f && z - r > -0.34f && z + r < 0.28f;
                         float score = ax + (z + 0.26f) * 0.35f + (sign < 0 ? 0.01f : 0f) + (onTray ? 0f : 2f);
                         if (score < bestScore) { bestScore = score; best = new Vector3(x, y, z); }
                     }
-            return best;
+            return found ? best : fallback;
+        }
+
+        /// <summary>트레이 위 점유 반지름: 가장 긴 변 기준 (얇은 원판이 대각선 크기로 자리를 낭비하지 않게).</summary>
+        float Foot(Part p)
+        {
+            Vector3 e = p.mesh.bounds.extents;
+            return Mathf.Min(Mathf.Max(e.x, Mathf.Max(e.y, e.z)) * item.scale * 1.1f, 0.2f);
         }
 
         public void ScrewOut(Screw s, bool quiet = false)
@@ -505,6 +522,8 @@ namespace ReCraft
                 case TestSound.Beep: Sfx.Play("beep", 0.8f); dur = 2.2f; break;
                 case TestSound.Engine: Sfx.Play("clunk", 0.9f); Sfx.Loop("engine", 0.75f); dur = 3.6f; break;
                 case TestSound.Arcade: Sfx.Play("arcade", 0.8f); dur = 3.0f; break;
+                case TestSound.Typewriter: Sfx.Play("typing", 0.9f); dur = 2.4f; break;
+                case TestSound.Record: Sfx.Play("record", 0.9f); dur = 4.2f; break;
                 default: Sfx.Play("clunk", 0.9f); Sfx.Loop("hum", 0.5f); break;
             }
             var root = item.root;

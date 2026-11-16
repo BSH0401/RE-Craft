@@ -342,7 +342,7 @@ namespace ReCraft
 
         public void ShowCatalog()
         {
-            var p = OpenOverlay("Catalog", V(1300, 800), "복원 도감");
+            var p = OpenOverlay("Catalog", V(1540, 800), "복원 도감");
             int done = 0;
             var all = Items.All;
             for (int i = 0; i < all.Count; i++)
@@ -350,7 +350,7 @@ namespace ReCraft
                 var it = all[i];
                 var e = G.Entry(it.id);
                 if (e != null) done++;
-                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 5) * 248, -90 - (i / 5) * 290), V(236, 274), UI.BgLight, false).transform;
+                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 6) * 246, -90 - (i / 6) * 290), V(236, 274), UI.BgLight, false).transform;
                 string tier = it.tier == 4 ? "희귀 유물" : it.tier == 3 ? "Tier 3 · 기계·엔진" : it.tier == 2 ? "Tier 2 · 정밀 기기" : "Tier 1 · 일상 잡화";
                 bool known = e != null || it.tier == 1 || (it.tier == 2 && G.data.stars >= G.Tier2Stars) || (it.tier == 3 && G.data.stars >= G.Tier3Stars) || (it.tier == 4 && (G.data.stars >= G.FinalStars || G.data.ended));
                 UI.Label(card, $"<color=#9a948a>{tier}</color>", 19, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -14), V(200, 26));

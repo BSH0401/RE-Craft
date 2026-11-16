@@ -23,7 +23,7 @@ namespace ReCraft
         static readonly Color Wood = C(0.45f, 0.26f, 0.13f);
 
         static List<ItemDef> all;
-        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), Engine(), Arcade(), Generator(), MusicBox() };
+        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), Typewriter(), Turntable(), Engine(), Arcade(), Generator(), MusicBox() };
 
         public static ItemDef Find(string id) => All.Find(i => i.id == id);
 
