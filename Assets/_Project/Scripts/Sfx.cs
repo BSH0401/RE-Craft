@@ -81,6 +81,37 @@ namespace ReCraft
             });
             Make("clunk", 0.9f, t => Sin(t, 90) * Env(t, 14) * 0.9f + Noise() * Env(t, 50) * 0.4f + (t > 0.55f ? (Sin(t, 1400) * 0.4f + Noise() * 0.3f) * Env(t - 0.55f, 30) : 0f));
             Make("melody", 9.5f, Melody);
+            // 회중시계: 태엽 감는 소리 → 초당 5번 째깍 (틱/톡 음높이 교대)
+            Make("ticking", 3.2f, t =>
+            {
+                float s = 0f;
+                if (t < 0.5f) s += (Mathf.Repeat(t * 30f, 1f) < 0.15f ? Noise() * 0.25f : 0f) * (1f - t / 0.5f);
+                float tt = t - 0.5f;
+                if (tt >= 0f)
+                {
+                    int k = (int)(tt * 5f);
+                    float lt = tt - k / 5f;
+                    s += (Sin(lt, k % 2 == 0 ? 4200 : 3300) * 0.35f + Noise() * 0.15f) * Env(lt, 160);
+                }
+                return s;
+            });
+            // 로봇 팔: 서보 모터 윙— 소리가 오르내리다 확인 비프 두 번
+            Make("robot", 3.2f, t =>
+            {
+                float s = 0f;
+                if (t < 2.6f)
+                {
+                    float hz = 320f + 140f * Mathf.Sin(t * 2.4f);
+                    float amp = Mathf.Clamp01(t * 4f) * Mathf.Clamp01((2.6f - t) * 4f);
+                    s += (Mathf.Repeat(t * hz, 1f) - 0.5f) * 0.18f * amp + Sin(t, hz * 2f) * 0.05f * amp;
+                }
+                foreach (float b in new[] { 2.65f, 2.85f })
+                {
+                    float bt = t - b;
+                    if (bt >= 0f && bt < 0.12f) s += Mathf.Sign(Sin(bt, 1760)) * 0.12f;
+                }
+                return s;
+            });
             // 타자기: 불규칙한 타닥 소리 → 끝에 '띵!' + 캐리지가 돌아가는 소리
             var hits = new float[] { 0.05f, 0.14f, 0.21f, 0.33f, 0.4f, 0.47f, 0.6f, 0.68f, 0.77f, 0.85f, 0.98f, 1.06f, 1.13f, 1.25f, 1.33f, 1.4f };
             Make("typing", 2.4f, t =>

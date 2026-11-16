@@ -5,7 +5,7 @@ namespace ReCraft
 {
     public enum Condition { Normal, Rusty, Broken }
     public enum AnimKind { None, Spin, Glow, Wobble }
-    public enum TestSound { Hum, Bell, Melody, Beep, Click, Engine, Arcade, Typewriter, Record }
+    public enum TestSound { Hum, Bell, Melody, Beep, Click, Engine, Arcade, Typewriter, Record, Watch, Robot }
 
     public class ScrewDef
     {
@@ -83,7 +83,8 @@ namespace ReCraft
     {
         public string id;
         public string name;
-        public int tier;           // 1, 2, 4(엔딩 유물)
+        public int tier;           // 1, 2, 3, 4(희귀 유물)
+        public float screwScale = 1f;   // 아주 작은 물건(회중시계)은 나사도 작게
         public int value;          // 기준 보수
         public TestSound sound;
         public string blurb;

@@ -79,6 +79,8 @@ namespace ReCraft
             var wb = Workbench.I;
             int jobs = (int)Boot.ArgF("-jobs", 1);
             string forced = Boot.Arg("-item");
+            bool relics = Boot.Flag("-relics");   // 게시판의 전설 의뢰만 연속으로 → 엔딩 확인
+            if (relics) jobs = G.Relics.Count;
             HUD.I.ShowBoard();
             yield return Wait(1.0f);
             yield return Shot("board");
@@ -87,6 +89,7 @@ namespace ReCraft
                 if (HUD.I.OverlayName != "Board") HUD.I.ShowBoard();
                 yield return Wait(0.3f);
                 Offer offer = HUD.I.offers[j % HUD.I.offers.Count];
+                if (relics) offer = HUD.I.offers.Find(o => o.item.tier == 4) ?? offer;
                 if (forced != null) offer = new Offer { item = Items.Find(forced), severity = 0.7f, reward = Items.Find(forced).value, seed = 12345 + j };
                 HUD.I.Accept(offer);
                 if (wb.item == null) { Debug.LogError("[Dev] accept failed"); break; }
@@ -139,6 +142,14 @@ namespace ReCraft
                 Debug.Log($"[Dev] job {j} item={sc.itemName} score={sc.total} payout={sc.payout} stars={sc.stars} gold={G.data.gold} totalStars={G.data.stars} tested={sc.tested}");
                 yield return Wait(0.5f);
                 yield return Shot("result");
+                if (relics) Debug.Log($"[Dev] relics {G.RelicsDone}/{G.Relics.Count} ended={G.data.ended}");
+            }
+            if (relics && G.data.ended)
+            {
+                HUD.I.ShowEnding();
+                yield return Wait(0.5f);
+                yield return Shot("ending");
+                Debug.Log("[Dev] ending shown");
             }
             HUD.I.ShowUpgrades();
             yield return Wait(0.3f);

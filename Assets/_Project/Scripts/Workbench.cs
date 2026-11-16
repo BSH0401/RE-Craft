@@ -10,7 +10,7 @@ namespace ReCraft
     {
         public string itemName;
         public float rust, dust, paint, parts, assembly;
-        public bool tested, auction, ending;
+        public bool tested, auction, ending, relic;
         public int total, payout, stars, reward, cost, partsCost;
     }
 
@@ -129,6 +129,7 @@ namespace ReCraft
                 {
                     var sgo = new GameObject("Screw") { layer = ScrewLayer };
                     sgo.transform.SetParent(it.root, false);
+                    sgo.transform.localScale = Vector3.one * def.screwScale;
                     sgo.AddComponent<MeshFilter>().sharedMesh = screwMesh;
                     var s = sgo.AddComponent<Screw>();
                     s.mr = sgo.AddComponent<MeshRenderer>();
@@ -148,6 +149,7 @@ namespace ReCraft
                     hole.transform.SetParent(it.root, false);
                     hole.transform.localPosition = s.homePos;
                     hole.transform.localRotation = s.homeRot;
+                    hole.transform.localScale = Vector3.one * def.screwScale;
                     var hc = hole.AddComponent<SphereCollider>();
                     hc.radius = 0.011f;
                     hole.AddComponent<MeshFilter>().sharedMesh = screwMesh;
@@ -172,7 +174,7 @@ namespace ReCraft
             Bounds all = MeshGen.BoundsOf(def.parts[0].shapes);
             foreach (var pd in def.parts) all.Encapsulate(MeshGen.BoundsOf(pd.shapes));
             float ext = Mathf.Max(all.extents.x, Mathf.Max(all.extents.y, all.extents.z));
-            it.scale = Mathf.Clamp(0.15f / ext, 1f, 1.8f);
+            it.scale = Mathf.Clamp(0.15f / ext, 1f, 2.5f);
             it.root.localScale = Vector3.one * it.scale;
             float bound = 0f;
             foreach (var p in it.parts)
@@ -183,10 +185,10 @@ namespace ReCraft
             // 거치대를 물건 바로 아래까지 올린다 (어느 방향으로 돌려도 닿지 않게 외접구 기준)
             Room.SetStand(ItemCenter.y - bound * it.scale - 0.004f);
             // 트레이 위 나사는 옆으로 눕힌다
-            foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale;
+            foreach (var s in it.screws) s.trayPos.y = Room.ScrewTrayTop + 0.0055f * it.scale * def.screwScale;
             item = it;
             // 부품이 많은 큰 물건은 작업대 전체가 보이도록 조금 물러선다
-            zoomTarget = def.parts.Count >= 20 ? 1.6f : 1.3f;
+            zoomTarget = def.parts.Count >= 20 && ext * it.scale > 0.17f ? 1.6f : 1.3f;
             SetTool(Tool.Hand);
             HUD.I?.OnItemChanged();
         }
@@ -379,7 +381,7 @@ namespace ReCraft
             s.tightening = false;
             s.progress = 0f;
             s.transform.SetParent(item.root, false);
-            s.transform.localScale = Vector3.one;
+            s.transform.localScale = Vector3.one * item.def.screwScale;
             s.ApplyPose();
             item.tested = false;
             if (!quiet)
@@ -399,7 +401,7 @@ namespace ReCraft
                 s.tightening = true;
                 s.progress = 1f;
                 s.transform.SetParent(item.root, false);
-                s.transform.localScale = Vector3.one;
+                s.transform.localScale = Vector3.one * item.def.screwScale;
                 Sfx.Play("tick", 0.5f);
             }
             float step = dt / G.ScrewTime;
@@ -524,6 +526,8 @@ namespace ReCraft
                 case TestSound.Arcade: Sfx.Play("arcade", 0.8f); dur = 3.0f; break;
                 case TestSound.Typewriter: Sfx.Play("typing", 0.9f); dur = 2.4f; break;
                 case TestSound.Record: Sfx.Play("record", 0.9f); dur = 4.2f; break;
+                case TestSound.Watch: Sfx.Play("ticking", 0.9f); dur = 3.2f; break;
+                case TestSound.Robot: Sfx.Play("robot", 0.9f); dur = 3.2f; break;
                 default: Sfx.Play("clunk", 0.9f); Sfx.Loop("hum", 0.5f); break;
             }
             var root = item.root;
@@ -616,7 +620,8 @@ namespace ReCraft
             var sc = Score();
             G.Earn(sc.payout, sc.stars);
             G.Record(item.def.id, sc.total);
-            if (item.def.tier == 4 && sc.total >= 80 && !G.data.ended)
+            if (item.def.tier == 4 && sc.total >= G.RelicScore) sc.relic = true;
+            if (item.def.tier == 4 && G.RelicsDone == G.Relics.Count && !G.data.ended)
             {
                 G.data.ended = true;
                 sc.ending = true;

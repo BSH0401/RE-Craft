@@ -168,11 +168,18 @@ namespace ReCraft
             }
             if (data.stars >= FinalStars || data.ended)
             {
-                var mb = Items.Find("musicbox");
-                offers.Add(new Offer { item = mb, severity = 0.9f, auction = false, cost = 0, reward = mb.value, seed = rng.Next() });
+                // 전설의 의뢰: 아직 복원하지 못한 유물부터 하나씩 (모두 끝났으면 아무거나)
+                var relics = Relics;
+                ItemDef next = relics.Find(r => !RelicDone(r.id)) ?? relics[rng.Next(relics.Count)];
+                offers.Add(new Offer { item = next, severity = 0.9f, auction = false, cost = 0, reward = next.value, seed = rng.Next() });
             }
             return offers;
         }
+
+        public const int RelicScore = 80;
+        public static List<ItemDef> Relics => Items.All.FindAll(i => i.tier == 4);
+        public static bool RelicDone(string id) { var e = Entry(id); return e != null && e.best >= RelicScore; }
+        public static int RelicsDone => Relics.FindAll(r => RelicDone(r.id)).Count;
 
         // ── 저장 ──
         static string SavePath => Path.Combine(Application.persistentDataPath, "recraft_save.json");

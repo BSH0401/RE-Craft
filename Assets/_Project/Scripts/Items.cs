@@ -23,7 +23,7 @@ namespace ReCraft
         static readonly Color Wood = C(0.45f, 0.26f, 0.13f);
 
         static List<ItemDef> all;
-        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), Typewriter(), Turntable(), Engine(), Arcade(), Generator(), MusicBox() };
+        public static List<ItemDef> All => all ??= new List<ItemDef> { Radio(), Toaster(), Clock(), Flashlight(), Console(), Camera(), Typewriter(), Turntable(), Engine(), Arcade(), Generator(), MusicBox(), Watch(), RobotArm() };
 
         public static ItemDef Find(string id) => All.Find(i => i.id == id);
 
@@ -296,7 +296,7 @@ namespace ReCraft
 
         static ItemDef MusicBox()
         {
-            var it = new ItemDef { id = "musicbox", name = "앤티크 오르골", tier = 4, value = 1500, sound = TestSound.Melody, blurb = "백 년을 잠들어 있던 멜로디. 공방의 마지막 의뢰." };
+            var it = new ItemDef { id = "musicbox", name = "앤티크 오르골", tier = 4, value = 1500, sound = TestSound.Melody, blurb = "백 년을 잠들어 있던 멜로디. 전설의 유물" };
             var body = it.Body("나무 상자");
             body.Box(.22f, .008f, .15f, 0, -.046f, 0, Wood, 0, .35f, true);
             body.Box(.22f, .084f, .008f, 0, 0, -.071f, Wood, 0, .35f, true);

@@ -274,8 +274,8 @@ namespace ReCraft
             }
             string unlock = G.data.stars < G.Tier2Stars ? $"다음 해금: ★{G.Tier2Stars} — Tier 2 정밀 기기 의뢰"
                 : G.data.stars < G.Tier3Stars ? $"다음 해금: ★{G.Tier3Stars} — Tier 3 기계·엔진 의뢰"
-                : G.data.stars < G.FinalStars && !G.data.ended ? $"다음 해금: ★{G.FinalStars} — 전설의 의뢰 (엔딩)"
-                : G.data.ended ? "모든 의뢰를 해금했습니다. 도감 100%에 도전해 보세요!" : "전설의 의뢰가 도착했습니다!";
+                : G.data.stars < G.FinalStars && !G.data.ended ? $"다음 해금: ★{G.FinalStars} — 전설의 의뢰 (유물 3점을 모두 복원하면 엔딩)"
+                : G.data.ended ? "모든 유물을 복원했습니다. 도감 100%에 도전해 보세요!" : $"전설의 유물 복원 {G.RelicsDone}/{G.Relics.Count} — 복원도 {G.RelicScore}% 이상으로 셋 모두 되살리면 엔딩";
             UI.Label(p, unlock, 22, UI.Accent, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 96), V(900, 36));
             UI.Label(p, "조작: 우클릭 드래그 회전 · 휠 줌 · Tab X-Ray · 1 손(분리/조립) · 2 드라이버(꾹 누르기) · 3 녹 제거 · 4 세척 · 5 도색", 19, UI.Dim, TextAnchor.MiddleLeft, V(0, 0), V(0, 0), V(32, 30), V(1100, 60));
             UI.Btn(p, "업그레이드 상점", V(1, 0), V(1, 0), V(-32, 28), V(220, 56), ShowUpgrades);
@@ -342,7 +342,7 @@ namespace ReCraft
 
         public void ShowCatalog()
         {
-            var p = OpenOverlay("Catalog", V(1540, 800), "복원 도감");
+            var p = OpenOverlay("Catalog", V(1786, 800), "복원 도감");
             int done = 0;
             var all = Items.All;
             for (int i = 0; i < all.Count; i++)
@@ -350,7 +350,7 @@ namespace ReCraft
                 var it = all[i];
                 var e = G.Entry(it.id);
                 if (e != null) done++;
-                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 6) * 246, -90 - (i / 6) * 290), V(236, 274), UI.BgLight, false).transform;
+                var card = UI.Panel(p, "Card", V(0, 1), V(0, 1), V(32 + (i % 7) * 246, -90 - (i / 7) * 290), V(236, 274), UI.BgLight, false).transform;
                 string tier = it.tier == 4 ? "희귀 유물" : it.tier == 3 ? "Tier 3 · 기계·엔진" : it.tier == 2 ? "Tier 2 · 정밀 기기" : "Tier 1 · 일상 잡화";
                 bool known = e != null || it.tier == 1 || (it.tier == 2 && G.data.stars >= G.Tier2Stars) || (it.tier == 3 && G.data.stars >= G.Tier3Stars) || (it.tier == 4 && (G.data.stars >= G.FinalStars || G.data.ended));
                 UI.Label(card, $"<color=#9a948a>{tier}</color>", 19, UI.TextCol, TextAnchor.UpperLeft, V(0, 1), V(0, 1), V(18, -14), V(200, 26));
@@ -384,6 +384,9 @@ namespace ReCraft
             if (sc.cost > 0) money += $"\n매입가  <color=#ff8a5a>-{sc.cost} G</color>";
             if (sc.partsCost > 0) money += $"\n교체 부품  <color=#ff8a5a>-{sc.partsCost} G</color>";
             money += $"\n<b>순이익  {(net >= 0 ? "+" : "")}{net} G</b>     명성 +{sc.stars}";
+            if (sc.relic) money += $"\n<color=#ffd24a><b>전설의 유물 복원!  {G.RelicsDone}/{G.Relics.Count}</b></color>";
+            else if (sc.itemName != null && Items.All.Exists(i => i.tier == 4 && i.name == sc.itemName))
+                money += $"\n<color=#ff8a5a>유물로 인정받으려면 복원도 {G.RelicScore}% 이상이 필요합니다</color>";
             UI.Label(p, money, 24, UI.TextCol, TextAnchor.UpperCenter, V(0.5f, 1), V(0.5f, 1), V(0, -460), V(700, 170));
             bool ending = sc.ending;
             UI.Btn(p, "계속", V(0.5f, 0), V(0.5f, 0), V(0, 28), V(260, 60), () => { if (ending) ShowEnding(); else ShowBoard(); }, new Color(0.5f, 0.34f, 0.1f, 0.98f));
@@ -393,7 +396,7 @@ namespace ReCraft
         {
             var p = OpenOverlay("Ending", V(1000, 620), "최고의 공방");
             Sfx.Play("melody", 0.9f);
-            UI.Label(p, "백 년 동안 잠들어 있던 오르골이 다시 노래합니다.\n\n녹슨 토스터 하나로 시작한 작은 작업대는\n이제 도시에서 가장 믿음직한 복원 공방이 되었습니다.\n\n<color=#ffc24a>RE:CRAFT — 복원 완료</color>", 30, UI.TextCol, TextAnchor.MiddleCenter, UI.Center, UI.Center, V(0, 30), V(900, 360));
+            UI.Label(p, "오르골이 노래하고, 회중시계가 째깍이고,\n로봇 팔이 다시 손을 듭니다.\n\n녹슨 토스터 하나로 시작한 작은 작업대는\n이제 도시에서 가장 믿음직한 복원 공방이 되었습니다.\n\n<color=#ffc24a>RE:CRAFT — 복원 완료</color>", 30, UI.TextCol, TextAnchor.MiddleCenter, UI.Center, UI.Center, V(0, 30), V(900, 360));
             UI.Label(p, $"납품 {G.data.jobsDone}회 · 명성 ★{G.data.stars} · 도감은 계속 채울 수 있습니다", 22, UI.Dim, TextAnchor.MiddleCenter, V(0.5f, 0), V(0.5f, 0), V(0, 104), V(900, 40));
             UI.Btn(p, "계속 플레이", V(0.5f, 0), V(0.5f, 0), V(0, 28), V(260, 60), ShowBoard, new Color(0.5f, 0.34f, 0.1f, 0.98f));
         }
